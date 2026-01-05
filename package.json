@@ -1,0 +1,39 @@
+{
+  "name": "taverna",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run build:packages && concurrently -k -n pkgs,api,web -c magenta,green,cyan \"npm:dev:packages\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:packages": "npm run dev --workspaces --if-present --include-workspace-root=false -w packages/dice -w packages/rules-core -w packages/rules-5e -w packages/shared",
+    "dev:api": "npm run start:dev -w api",
+    "dev:web": "npm run dev -w web",
+    "build:packages": "npm run build -w packages/shared -w packages/dice -w packages/rules-core -w packages/rules-5e --if-present",
+    "build": "npm run build:packages && npm run build -w api && npm run build -w web",
+    "db:migrate": "npm run db:migrate -w api",
+    "db:seed": "npm run db:seed -w api",
+    "test": "npm run build:packages && npm test --workspaces --if-present",
+    "lint": "eslint .",
+    "typecheck": "npm run build:packages && npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^9.2.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module"
+}
