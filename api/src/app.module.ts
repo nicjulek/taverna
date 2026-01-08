@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { validateEnv } from './config/env'
 import { DatabaseModule } from './database/database.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { CampaignsModule } from './modules/campaigns/campaigns.module'
 import { HealthController } from './modules/health/health.controller'
 
 const webDist = join(__dirname, '..', '..', 'web', 'dist')
@@ -26,7 +27,8 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist')
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     ...(existsSync(webDist) ? [ServeStaticModule.forRoot({ rootPath: webDist, exclude: ['/api/{*path}', '/socket.io/{*path}'] })] : []),
     DatabaseModule,
-    AuthModule
+    AuthModule,
+    CampaignsModule
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
