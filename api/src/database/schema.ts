@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm'
-import { index, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import type { Role, RuleSystemId } from '@taverna/shared'
+import { index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import type { AccessLevel, Role, RuleSystemId } from '@taverna/shared'
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 const updatedAt = () =>
@@ -44,6 +44,25 @@ export const campaignMembers = pgTable(
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [primaryKey({ columns: [table.campaignId, table.userId] }), index('campaign_members_user_idx').on(table.userId)]
+)
+
+export const journals = pgTable(
+  'journals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    folder: text('folder').notNull().default(''),
+    content: text('content').notNull().default(''),
+    defaultAccess: text('default_access').$type<AccessLevel>().notNull().default('none'),
+    grants: jsonb('grants').$type<Record<string, AccessLevel>>().notNull().default({}),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [index('journals_campaign_idx').on(table.campaignId)]
 )
 
 export const usersRelations = relations(users, ({ many }) => ({

@@ -10,6 +10,7 @@ import { validateEnv } from './config/env'
 import { DatabaseModule } from './database/database.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { CampaignsModule } from './modules/campaigns/campaigns.module'
+import { JournalsModule } from './modules/journals/journals.module'
 import { HealthController } from './modules/health/health.controller'
 
 const webDist = join(__dirname, '..', '..', 'web', 'dist')
@@ -28,7 +29,8 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist')
     ...(existsSync(webDist) ? [ServeStaticModule.forRoot({ rootPath: webDist, exclude: ['/api/{*path}', '/socket.io/{*path}'] })] : []),
     DatabaseModule,
     AuthModule,
-    CampaignsModule
+    CampaignsModule,
+    JournalsModule
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
