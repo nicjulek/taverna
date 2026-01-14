@@ -69,7 +69,11 @@ export class JournalsService {
   async remove(campaignId: string, journalId: string, userId: string): Promise<void> {
     const role = await this.access.requireMember(campaignId, userId)
     const row = await this.find(campaignId, journalId)
-    if (!this.canShare(row, userId, role)) throw new ForbiddenException('Só o autor ou o mestre pode apagar esta página')
+    if (!this.canShare(row, userId, role)) {
+      throw canView(this.levelFor(row, userId, role))
+        ? new ForbiddenException('Só o autor ou o mestre pode apagar esta página')
+        : new NotFoundException('Página não encontrada')
+    }
     await this.db.delete(journals).where(eq(journals.id, journalId))
   }
 
