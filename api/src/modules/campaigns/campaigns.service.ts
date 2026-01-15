@@ -5,6 +5,7 @@ import { asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
 import { campaignMembers, campaigns, users } from '../../database/schema'
 import { CampaignAccessService } from './campaign-access.service'
+import { RealtimeService } from '../realtime/realtime.service'
 
 export function newInviteCode(): string {
   return randomBytes(9).toString('base64url')
@@ -14,7 +15,8 @@ export function newInviteCode(): string {
 export class CampaignsService {
   constructor(
     @Inject(DB) private readonly db: Database,
-    private readonly access: CampaignAccessService
+    private readonly access: CampaignAccessService,
+    private readonly realtime: RealtimeService
   ) {}
 
   async list(userId: string): Promise<CampaignSummaryDto[]> {
@@ -50,7 +52,13 @@ export class CampaignsService {
     const campaignId = await this.db.transaction(async (tx) => {
       const [campaign] = await tx
         .insert(campaigns)
-        .values({ name: input.name, description: input.description ?? '', system: input.system ?? 'dnd5e', ownerId: userId, inviteCode: newInviteCode() })
+        .values({
+          name: input.name,
+          description: input.description ?? '',
+          system: input.system ?? 'dnd5e',
+          ownerId: userId,
+          inviteCode: newInviteCode()
+        })
         .returning({ id: campaigns.id })
       await tx.insert(campaignMembers).values({ campaignId: campaign!.id, userId, role: 'gm' })
       return campaign!.id
@@ -80,12 +88,18 @@ export class CampaignsService {
   async update(campaignId: string, userId: string, input: UpdateCampaignInput): Promise<CampaignDto> {
     await this.access.requireGameMaster(campaignId, userId)
     await this.db.update(campaigns).set(input).where(eq(campaigns.id, campaignId))
+    this.realtime.changed(campaignId, 'campaign')
     return this.get(campaignId, userId)
   }
 
   async remove(campaignId: string, userId: string): Promise<void> {
     await this.access.requireOwner(campaignId, userId)
+    const members = await this.members(campaignId)
     await this.db.delete(campaigns).where(eq(campaigns.id, campaignId))
+    this.realtime.removed(
+      campaignId,
+      members.map((member) => member.userId)
+    )
   }
 
   async members(campaignId: string): Promise<MemberDto[]> {

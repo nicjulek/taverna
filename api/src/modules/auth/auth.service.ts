@@ -16,10 +16,17 @@ export class AuthService {
 
   async register(input: RegisterInput): Promise<UserDto> {
     const existing = await this.db.query.users.findFirst({ where: eq(users.email, input.email) })
-    if (existing) throw new ConflictException({ message: 'Já existe uma conta com esse e-mail', fields: { email: 'Já existe uma conta com esse e-mail' } })
+    if (existing)
+      throw new ConflictException({
+        message: 'Já existe uma conta com esse e-mail',
+        fields: { email: 'Já existe uma conta com esse e-mail' }
+      })
     const passwordHash = await bcrypt.hash(input.password, 10)
     const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)] ?? USER_COLORS[0]!
-    const [user] = await this.db.insert(users).values({ email: input.email, displayName: input.displayName, passwordHash, color }).returning()
+    const [user] = await this.db
+      .insert(users)
+      .values({ email: input.email, displayName: input.displayName, passwordHash, color })
+      .returning()
     return toUserDto(user!)
   }
 

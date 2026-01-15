@@ -15,6 +15,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
 import { campaignMembers, journals, users } from '../../database/schema'
 import { CampaignAccessService } from '../campaigns/campaign-access.service'
+import { RealtimeService } from '../realtime/realtime.service'
 
 type JournalRow = typeof journals.$inferSelect & { authorName: string | null }
 
@@ -22,15 +23,14 @@ type JournalRow = typeof journals.$inferSelect & { authorName: string | null }
 export class JournalsService {
   constructor(
     @Inject(DB) private readonly db: Database,
-    private readonly access: CampaignAccessService
+    private readonly access: CampaignAccessService,
+    private readonly realtime: RealtimeService
   ) {}
 
   async list(campaignId: string, userId: string): Promise<JournalSummaryDto[]> {
     const role = await this.access.requireMember(campaignId, userId)
     const rows = await this.rows(campaignId)
-    return rows
-      .map((row) => this.toSummary(row, this.levelFor(row, userId, role)))
-      .filter((journal) => canView(journal.access))
+    return rows.map((row) => this.toSummary(row, this.levelFor(row, userId, role))).filter((journal) => canView(journal.access))
   }
 
   async get(campaignId: string, journalId: string, userId: string): Promise<JournalDto> {
@@ -47,6 +47,7 @@ export class JournalsService {
       .insert(journals)
       .values({ campaignId, authorId: userId, title: input.title, content: input.content ?? '', folder: input.folder ?? '' })
       .returning({ id: journals.id })
+    this.realtime.changed(campaignId, 'journals')
     return this.get(campaignId, row!.id, userId)
   }
 
@@ -54,7 +55,8 @@ export class JournalsService {
     const role = await this.access.requireMember(campaignId, userId)
     const row = await this.find(campaignId, journalId)
     const level = this.levelFor(row, userId, role)
-    if (!canEdit(level)) throw canView(level) ? new ForbiddenException('Você só pode ler esta página') : new NotFoundException('Página não encontrada')
+    if (!canEdit(level))
+      throw canView(level) ? new ForbiddenException('Você só pode ler esta página') : new NotFoundException('Página não encontrada')
     const { access, ...fields } = input
     const changes: Partial<typeof journals.$inferInsert> = { ...fields }
     if (access) {
@@ -63,6 +65,7 @@ export class JournalsService {
       changes.grants = await this.sanitizeGrants(campaignId, access.grants)
     }
     await this.db.update(journals).set(changes).where(eq(journals.id, journalId))
+    this.realtime.changed(campaignId, 'journals')
     return this.get(campaignId, journalId, userId)
   }
 
@@ -75,6 +78,7 @@ export class JournalsService {
         : new NotFoundException('Página não encontrada')
     }
     await this.db.delete(journals).where(eq(journals.id, journalId))
+    this.realtime.changed(campaignId, 'journals')
   }
 
   private canShare(row: JournalRow, userId: string, role: Role): boolean {
@@ -86,7 +90,10 @@ export class JournalsService {
   }
 
   private async sanitizeGrants(campaignId: string, grants: Record<string, AccessLevel>): Promise<Record<string, AccessLevel>> {
-    const members = await this.db.select({ userId: campaignMembers.userId }).from(campaignMembers).where(eq(campaignMembers.campaignId, campaignId))
+    const members = await this.db
+      .select({ userId: campaignMembers.userId })
+      .from(campaignMembers)
+      .where(eq(campaignMembers.campaignId, campaignId))
     const ids = new Set(members.map((member) => member.userId))
     return Object.fromEntries(Object.entries(grants).filter(([id, level]) => ids.has(id) && level !== 'none'))
   }

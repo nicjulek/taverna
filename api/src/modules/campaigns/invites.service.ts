@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
 import { campaignMembers, campaigns, users } from '../../database/schema'
 import { CampaignAccessService } from './campaign-access.service'
+import { RealtimeService } from '../realtime/realtime.service'
 import { newInviteCode } from './campaigns.service'
 
 export const MAX_MEMBERS = 12
@@ -12,7 +13,8 @@ export const MAX_MEMBERS = 12
 export class InvitesService {
   constructor(
     @Inject(DB) private readonly db: Database,
-    private readonly access: CampaignAccessService
+    private readonly access: CampaignAccessService,
+    private readonly realtime: RealtimeService
   ) {}
 
   async preview(code: string, userId: string): Promise<InvitePreviewDto> {
@@ -37,6 +39,7 @@ export class InvitesService {
     if (role) return { campaignId: campaign.id }
     if ((await this.countMembers(campaign.id)) >= MAX_MEMBERS) throw new BadRequestException(`A mesa já tem ${MAX_MEMBERS} participantes`)
     await this.db.insert(campaignMembers).values({ campaignId: campaign.id, userId, role: 'player' }).onConflictDoNothing()
+    this.realtime.changed(campaign.id, 'members')
     return { campaignId: campaign.id }
   }
 

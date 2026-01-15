@@ -1,5 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common'
-import { CreateJournalInput, createJournalSchema, JournalDto, JournalSummaryDto, UpdateJournalInput, updateJournalSchema } from '@taverna/shared'
+import {
+  CreateJournalInput,
+  createJournalSchema,
+  JournalDto,
+  JournalSummaryDto,
+  UpdateJournalInput,
+  updateJournalSchema
+} from '@taverna/shared'
 import { AuthUser, CurrentUser } from '../../common/auth'
 import { UuidPipe } from '../../common/uuid.pipe'
 import { ZodPipe } from '../../common/zod.pipe'
@@ -24,7 +31,11 @@ export class JournalsController {
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthUser, @Param('campaignId', UuidPipe) campaignId: string, @Param('id', UuidPipe) id: string): Promise<JournalDto> {
+  get(
+    @CurrentUser() user: AuthUser,
+    @Param('campaignId', UuidPipe) campaignId: string,
+    @Param('id', UuidPipe) id: string
+  ): Promise<JournalDto> {
     return this.journals.get(campaignId, id, user.id)
   }
 
@@ -40,7 +51,11 @@ export class JournalsController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthUser, @Param('campaignId', UuidPipe) campaignId: string, @Param('id', UuidPipe) id: string): Promise<void> {
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('campaignId', UuidPipe) campaignId: string,
+    @Param('id', UuidPipe) id: string
+  ): Promise<void> {
     return this.journals.remove(campaignId, id, user.id)
   }
 }
