@@ -23,7 +23,10 @@ export interface TestUser {
 export async function signUp(app: INestApplication, name = 'Aventureira'): Promise<TestUser> {
   counter += 1
   const email = `user${counter}-${Date.now()}@teste.dev`
-  const res = await request(app.getHttpServer()).post('/api/auth/register').send({ displayName: name, email, password: 'senha-forte-123' }).expect(201)
+  const res = await request(app.getHttpServer())
+    .post('/api/auth/register')
+    .send({ displayName: name, email, password: 'senha-forte-123' })
+    .expect(201)
   const cookie = ([] as string[]).concat(res.headers['set-cookie'] ?? [])[0]!.split(';')[0]!
   return {
     id: res.body.id as string,

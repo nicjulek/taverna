@@ -15,6 +15,10 @@ export default tseslint.config(
     }
   },
   {
+    files: ['**/*.cjs', 'api/jest.config.js'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node }
+  },
+  {
     files: ['api/**/*.ts'],
     languageOptions: { globals: { ...globals.node, ...globals.jest } },
     rules: { '@typescript-eslint/consistent-type-imports': 'off' }

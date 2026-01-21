@@ -23,7 +23,11 @@ describe('diário e permissões', () => {
   })
 
   it('página nova do mestre começa secreta', async () => {
-    const page = await gm.agent().post(`/api/campaigns/${campaignId}/journals`).send({ title: 'O traidor', content: 'É o prefeito.' }).expect(201)
+    const page = await gm
+      .agent()
+      .post(`/api/campaigns/${campaignId}/journals`)
+      .send({ title: 'O traidor', content: 'É o prefeito.' })
+      .expect(201)
     expect(page.body).toMatchObject({ access: 'edit', defaultAccess: 'none' })
     const list = await ana.agent().get(`/api/campaigns/${campaignId}/journals`).expect(200)
     expect(list.body).toHaveLength(0)
@@ -54,7 +58,11 @@ describe('diário e permissões', () => {
   })
 
   it('o diário pessoal do jogador fica escondido até do outro jogador, mas não do mestre', async () => {
-    const page = await bruno.agent().post(`/api/campaigns/${campaignId}/journals`).send({ title: 'Anotações do Bruno', folder: 'Pessoal' }).expect(201)
+    const page = await bruno
+      .agent()
+      .post(`/api/campaigns/${campaignId}/journals`)
+      .send({ title: 'Anotações do Bruno', folder: 'Pessoal' })
+      .expect(201)
     await ana.agent().get(`/api/campaigns/${campaignId}/journals/${page.body.id}`).expect(404)
     const asGm = await gm.agent().get(`/api/campaigns/${campaignId}/journals/${page.body.id}`).expect(200)
     expect(asGm.body.access).toBe('edit')

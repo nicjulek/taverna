@@ -14,7 +14,11 @@ describe('campanhas, convites e papéis', () => {
     gm = await signUp(app, 'Mestra')
     player = await signUp(app, 'Bardo')
     outsider = await signUp(app, 'Estranho')
-    const res = await gm.agent().post('/api/campaigns').send({ name: 'A Mina Perdida', description: 'Uma aventura nas montanhas' }).expect(201)
+    const res = await gm
+      .agent()
+      .post('/api/campaigns')
+      .send({ name: 'A Mina Perdida', description: 'Uma aventura nas montanhas' })
+      .expect(201)
     campaignId = res.body.id
     inviteCode = res.body.inviteCode
   })

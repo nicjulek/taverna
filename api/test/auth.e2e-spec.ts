@@ -30,12 +30,18 @@ describe('auth', () => {
   })
 
   it('login com senha errada devolve 401 sem dizer se o e-mail existe', async () => {
-    const res = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'ninguem@teste.dev', password: 'qualquer' }).expect(401)
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'ninguem@teste.dev', password: 'qualquer' })
+      .expect(401)
     expect(res.body.message).toBe('E-mail ou senha incorretos')
   })
 
   it('valida os campos com mensagens por campo', async () => {
-    const res = await request(app.getHttpServer()).post('/api/auth/register').send({ displayName: 'A', email: 'x', password: '123' }).expect(400)
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ displayName: 'A', email: 'x', password: '123' })
+      .expect(400)
     expect(Object.keys(res.body.fields).sort()).toEqual(['displayName', 'email', 'password'])
   })
 
