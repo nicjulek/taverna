@@ -1,0 +1,134 @@
+@import 'tailwindcss';
+@import '@fontsource/alegreya/500.css';
+@import '@fontsource/alegreya/700.css';
+@import '@fontsource/alegreya/500-italic.css';
+@import '@fontsource/alegreya-sans/400.css';
+@import '@fontsource/alegreya-sans/500.css';
+@import '@fontsource/alegreya-sans/700.css';
+
+@theme {
+  --font-display: 'Alegreya', Georgia, serif;
+  --font-sans: 'Alegreya Sans', system-ui, sans-serif;
+
+  --color-felt: #16231e;
+  --color-felt-deep: #101a16;
+  --color-surface: #1f2f29;
+  --color-surface-raised: #283b34;
+  --color-line: #33493f;
+  --color-line-strong: #4a6458;
+  --color-bone: #ece4d4;
+  --color-moss: #9aab9f;
+  --color-moss-dim: #74867b;
+  --color-brass: #d6a446;
+  --color-brass-bright: #e8bb5f;
+  --color-brass-ink: #1d1708;
+  --color-seal: #c5523f;
+  --color-seal-soft: #e07a66;
+  --color-leaf: #7fb487;
+
+  --radius-control: 0.5rem;
+  --radius-panel: 0.875rem;
+
+  --shadow-raised: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 10px 30px -12px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-felt font-sans text-bone antialiased;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    background-image: radial-gradient(120% 80% at 50% -10%, rgb(214 164 70 / 0.07), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-bone;
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+  }
+
+  ::selection {
+    background: rgb(214 164 70 / 0.35);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brass);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .prose-taverna {
+    @apply text-bone;
+    line-height: 1.65;
+    max-width: 68ch;
+  }
+  .prose-taverna h1,
+  .prose-taverna h2,
+  .prose-taverna h3 {
+    @apply mt-6 mb-2 font-display;
+  }
+  .prose-taverna h1 {
+    font-size: 1.75rem;
+  }
+  .prose-taverna h2 {
+    font-size: 1.4rem;
+  }
+  .prose-taverna h3 {
+    font-size: 1.2rem;
+  }
+  .prose-taverna p,
+  .prose-taverna ul,
+  .prose-taverna ol,
+  .prose-taverna blockquote {
+    @apply my-3;
+  }
+  .prose-taverna ul {
+    @apply list-disc pl-6;
+  }
+  .prose-taverna ol {
+    @apply list-decimal pl-6;
+  }
+  .prose-taverna a {
+    @apply text-brass underline underline-offset-2;
+  }
+  .prose-taverna blockquote {
+    @apply border-l-2 border-brass/60 pl-4 font-display text-moss italic;
+  }
+  .prose-taverna code {
+    @apply rounded bg-felt-deep px-1.5 py-0.5 text-[0.9em];
+  }
+  .prose-taverna hr {
+    @apply my-6 border-line;
+  }
+  .prose-taverna table {
+    @apply my-4 w-full border-collapse text-left;
+  }
+  .prose-taverna th,
+  .prose-taverna td {
+    @apply border-b border-line px-2 py-1.5;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
