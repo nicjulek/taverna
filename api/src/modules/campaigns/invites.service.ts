@@ -1,13 +1,11 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { InvitePreviewDto } from '@taverna/shared'
+import { InvitePreviewDto, MAX_MEMBERS } from '@taverna/shared'
 import { and, eq, sql } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
 import { campaignMembers, campaigns, users } from '../../database/schema'
 import { CampaignAccessService } from './campaign-access.service'
 import { RealtimeService } from '../realtime/realtime.service'
 import { newInviteCode } from './campaigns.service'
-
-export const MAX_MEMBERS = 12
 
 @Injectable()
 export class InvitesService {

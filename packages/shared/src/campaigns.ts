@@ -3,6 +3,8 @@ import { z } from 'zod'
 export const RULE_SYSTEMS = ['dnd5e'] as const
 export type RuleSystemId = (typeof RULE_SYSTEMS)[number]
 
+export const MAX_MEMBERS = 12
+
 export const ROLES = ['gm', 'cogm', 'player'] as const
 export type Role = (typeof ROLES)[number]
 
