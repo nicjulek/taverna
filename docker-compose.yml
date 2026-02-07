@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: taverna
+      POSTGRES_PASSWORD: taverna
+      POSTGRES_DB: taverna
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U taverna']
+      interval: 5s
+      retries: 10
+
+  app:
+    profiles: ['app']
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://taverna:taverna@db:5432/taverna
+      JWT_SECRET: troque-por-uma-frase-longa-e-aleatoria
+      WEB_ORIGIN: http://localhost:3000
+    ports:
+      - '3000:3000'
+
+volumes:
+  pgdata:
