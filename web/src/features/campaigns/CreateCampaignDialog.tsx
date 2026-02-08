@@ -47,12 +47,7 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
           </Field>
           <Field label="Sobre a campanha" error={errors.description?.message} hint="Opcional. Aparece no convite.">
             {(props) => (
-              <Textarea
-                rows={3}
-                placeholder="Um grupo de aventureiros chega a Vau-do-Corvo…"
-                {...props}
-                {...register('description')}
-              />
+              <Textarea rows={3} placeholder="Um grupo de aventureiros chega a Vau-do-Corvo…" {...props} {...register('description')} />
             )}
           </Field>
           <div className="rounded-control border border-line bg-felt-deep px-3 py-2.5">

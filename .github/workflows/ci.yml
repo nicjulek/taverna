@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualidade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:packages
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+
+  integracao:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: taverna
+          POSTGRES_PASSWORD: taverna
+          POSTGRES_DB: taverna_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taverna"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://taverna:taverna@localhost:5432/taverna_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:packages
+      - run: npm run test:e2e -w api
+
+  ponta-a-ponta:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: taverna
+          POSTGRES_PASSWORD: taverna
+          POSTGRES_DB: taverna
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taverna"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://taverna:taverna@localhost:5432/taverna
+      JWT_SECRET: segredo-do-ci-da-taverna-123
+      WEB_ORIGIN: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:packages
+      - run: npm run db:migrate
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run test:e2e -w web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [qualidade]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
