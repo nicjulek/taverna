@@ -60,7 +60,7 @@ export function CampaignLayout() {
           <p className="text-moss">D&D 5ª edição</p>
         </div>
         <div className="flex items-center gap-3 max-sm:w-full" aria-label="Quem está na mesa">
-          <div className="flex -space-x-1.5">
+          <div className="flex -space-x-1">
             {campaign.memberList.map((member) => (
               <Token
                 key={member.userId}

@@ -4,7 +4,9 @@ describe('format', () => {
   it('pega as iniciais ignorando artigos', () => {
     expect(initials('A Mina Perdida')).toBe('MP')
     expect(initials('Curse of Strahd')).toBe('CS')
+    expect(initials('As Minas de Pedraluz')).toBe('MP')
     expect(initials('Ruínas')).toBe('R')
+    expect(initials('O A')).toBe('OA')
     expect(initials('   ')).toBe('?')
   })
 

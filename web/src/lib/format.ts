@@ -17,13 +17,22 @@ export function timeAgo(iso: string, now = Date.now()): string {
   return 'agora mesmo'
 }
 
+const SMALL_WORDS = new Set(['a', 'as', 'o', 'os', 'de', 'da', 'das', 'do', 'dos', 'e', 'em', 'na', 'no', 'the', 'of', 'and'])
+
 export function initials(name: string): string {
   const words = name
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .split(/\s+/)
-    .filter((word) => word.length > 2 || (word.length > 1 && /^\p{Lu}/u.test(word)))
-  const picked = (words.length >= 2 ? [words[0], words[words.length - 1]] : [name.trim()]).map((word) => word?.[0] ?? '')
-  return picked.join('').toUpperCase().slice(0, 2) || '?'
+    .filter(Boolean)
+  const meaningful = words.filter((word) => !SMALL_WORDS.has(word.toLowerCase()))
+  const pool = meaningful.length > 0 ? meaningful : words
+  const picked = pool.length >= 2 ? [pool[0], pool[pool.length - 1]] : pool
+  return (
+    picked
+      .map((word) => word?.[0] ?? '')
+      .join('')
+      .toUpperCase() || '?'
+  )
 }
 
 export function plural(count: number, one: string, many: string): string {
