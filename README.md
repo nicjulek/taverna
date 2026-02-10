@@ -1,3 +1,139 @@
 # Taverna
 
-Mesa virtual para jogar RPG de mesa online, começando pelo D&D 5e.
+Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campanha, manda um link de convite e o grupo joga junto em tempo real, cada um de onde estiver. Começa pelo **D&D 5ª edição**, mas foi pensada para receber outros sistemas.
+
+![Diário da campanha](docs/diario.webp)
+
+## O que já dá para fazer
+
+- **Contas** com cadastro, login e sessão em cookie httpOnly. Cada pessoa escolhe o nome e a cor com que aparece na mesa.
+- **Campanhas**: quem cria vira mestre. A lista mostra as mesas que você mestra e as que você joga.
+- **Convite por link**: o mestre copia o link e quem abrir entra como jogador. Dá para gerar outro link (o antigo para de funcionar) ou desativar o convite.
+- **Papéis**: mestre, co-mestre e jogador. O mestre promove e remove participantes, o co-mestre ajuda a organizar e qualquer jogador pode sair.
+- **Diário** em Markdown, com pastas e busca. Cada página tem permissão própria: secreta, todos leem ou todos editam, e exceções por jogador. O autor e os mestres sempre podem tudo.
+- **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
+
+| Jogadores e convite | Quem vê cada página |
+| --- | --- |
+| ![Jogadores](docs/jogadores.webp) | ![Permissões](docs/permissoes.webp) |
+
+| Editor | Suas mesas |
+| --- | --- |
+| ![Editor](docs/editor.webp) | ![Suas mesas](docs/mesas.webp) |
+
+<p align="center"><img src="docs/celular.webp" alt="Taverna no celular" width="260" /></p>
+
+## Stack
+
+| Camada | Tecnologias |
+| --- | --- |
+| Front-end | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query, React Hook Form, Zod, Radix UI |
+| Back-end | NestJS 11, Drizzle ORM, PostgreSQL, Socket.IO, JWT em cookie httpOnly, Helmet, rate limit, logs com Pino |
+| Compartilhado | Pacote `@taverna/shared` com schemas Zod, tipos e eventos do WebSocket usados pela API e pelo front |
+| Testes | Jest e Supertest com banco real na API, Vitest e Testing Library no front, Playwright com dois navegadores (mestre e jogador) |
+| Entrega | Docker multi-stage, Docker Compose, GitHub Actions |
+
+## Arquitetura
+
+```
+taverna/
+├── packages/
+│   └── shared/          schemas, tipos, papéis, permissões e eventos do tempo real
+├── api/                 NestJS
+│   ├── drizzle/         migrations SQL
+│   ├── src/
+│   │   ├── common/      guard de sessão, validação com Zod, pipes
+│   │   ├── config/      validação das variáveis de ambiente
+│   │   ├── database/    schema do Drizzle, migrate e seed
+│   │   └── modules/
+│   │       ├── auth/        cadastro, login e perfil
+│   │       ├── campaigns/   campanhas, convites, papéis e acesso
+│   │       ├── journals/    diário com permissões
+│   │       ├── realtime/    gateway Socket.IO, salas e presença
+│   │       └── health/
+│   └── test/            testes de integração com PostgreSQL
+└── web/                 React
+    ├── src/
+    │   ├── app/         rotas, layout, guards
+    │   ├── components/  design system
+    │   ├── features/    uma pasta por tela
+    │   └── lib/         cliente HTTP, socket, markdown
+    └── e2e/             Playwright
+```
+
+A regra de permissão vive em `packages/shared`, então a API e o front usam a mesma função para decidir quem vê e quem edita. Na API, toda rota de campanha passa pelo `CampaignAccessService`, e quem não participa recebe 404 em vez de 403, para não revelar que a campanha existe.
+
+O tempo real usa uma sala do Socket.IO por campanha. A conexão se autentica pelo mesmo cookie da API, e entrar na sala exige ser participante. Depois de cada alteração, os serviços avisam a sala e o front só invalida a consulta certa no TanStack Query.
+
+## Como rodar
+
+Requisitos: **Node 20+** e **Docker Desktop** aberto.
+
+```bash
+npm install
+cp api/.env.example api/.env
+npm run db:up
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+No PowerShell, troque o `cp` por `copy api\.env.example api\.env`.
+
+Abra http://localhost:5173. O seed cria a campanha **As Minas de Pedraluz** com três contas, todas com a senha `taverna123`:
+
+| Conta | Papel |
+| --- | --- |
+| mestre@taverna.dev | Mestre |
+| ana@taverna.dev | Co-mestre |
+| bruno@taverna.dev | Jogador |
+
+Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas anônima).
+
+## Testes
+
+```bash
+npm test                    # unitários da API e do front
+npm run test:e2e -w api     # integração da API com PostgreSQL
+npm run test:e2e -w web     # Playwright com mestre e jogador ao mesmo tempo
+npm run lint
+npm run typecheck
+```
+
+Os testes de integração usam o banco `taverna_test`, criado automaticamente pelo `docker-compose`.
+
+## API
+
+Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sessão.
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| POST | `/auth/register`, `/auth/login`, `/auth/logout` | Sessão |
+| GET, PATCH | `/auth/me` | Perfil |
+| GET, POST | `/campaigns` | Suas campanhas e criar |
+| GET, PATCH, DELETE | `/campaigns/:id` | Detalhes, editar e apagar |
+| POST, DELETE | `/campaigns/:id/invite` | Gerar ou desativar o link |
+| GET | `/invites/:code` | Prévia do convite |
+| POST | `/invites/:code/accept` | Entrar na campanha |
+| GET | `/campaigns/:id/members` | Participantes |
+| PATCH, DELETE | `/campaigns/:id/members/:userId` | Mudar papel e remover |
+| GET, POST | `/campaigns/:id/journals` | Páginas visíveis e criar |
+| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId` | Ler, editar, permissões e apagar |
+| GET | `/health` | Saúde da API e do banco |
+
+| Evento (Socket.IO) | Direção | O que faz |
+| --- | --- | --- |
+| `campaign:join`, `campaign:leave` | cliente → servidor | Entrar e sair da sala da campanha |
+| `presence:list` | servidor → cliente | Quem está na mesa agora |
+| `campaign:changed` | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
+| `campaign:removed` | servidor → cliente | Você saiu ou foi removido |
+
+## Deploy
+
+Em produção a API também entrega o front, então é um serviço só, e as migrations rodam sozinhas ao iniciar:
+
+```bash
+docker compose --profile app up --build
+```
+
+Variáveis: `DATABASE_URL`, `JWT_SECRET`, `WEB_ORIGIN` e `PORT`.
