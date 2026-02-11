@@ -2,6 +2,7 @@ import { ROLE_LABELS } from '@taverna/shared'
 import { Plus, Ticket } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { EmptyTable } from '@/components/art/EmptyTable'
 import { Badge, Button, EmptyState, ErrorNote, Seal, Skeleton } from '@/components/ui'
 import { plural, timeAgo } from '@/lib/format'
 import { CreateCampaignDialog } from './CreateCampaignDialog'
@@ -14,7 +15,7 @@ export function CampaignsPage() {
   const [joining, setJoining] = useState(false)
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl">Suas mesas</h1>
@@ -43,6 +44,7 @@ export function CampaignsPage() {
       {campaigns && campaigns.length === 0 && (
         <EmptyState
           title="Nenhuma mesa por aqui ainda"
+          art={<EmptyTable className="w-full" />}
           action={
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => setCreating(true)}>
@@ -85,6 +87,6 @@ export function CampaignsPage() {
 
       <CreateCampaignDialog open={creating} onOpenChange={setCreating} />
       <JoinDialog open={joining} onOpenChange={setJoining} />
-    </main>
+    </div>
   )
 }

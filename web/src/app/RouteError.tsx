@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
+import { CriticalFail } from '@/components/art/CriticalFail'
 import { Button, EmptyState } from '@/components/ui'
 
 export function RouteError() {
@@ -7,7 +8,8 @@ export function RouteError() {
   return (
     <main className="mx-auto grid min-h-dvh max-w-lg place-items-center px-4">
       <EmptyState
-        title="Algo quebrou nesta tela"
+        art={<CriticalFail className="mx-auto w-40" />}
+        title="Falha crítica nesta tela"
         action={
           <Button asChild>
             <Link to="/campanhas" reloadDocument>

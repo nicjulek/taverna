@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Die } from '@/components/Die'
+import { TavernTable } from '@/components/art/TavernTable'
 
 export function AuthLayout({
   title,
@@ -19,7 +20,7 @@ export function AuthLayout({
           <Die className="size-8 text-brass" />
           <span className="font-display text-3xl font-bold">Taverna</span>
         </div>
-        <Die className="pointer-events-none absolute -right-24 top-1/2 size-[30rem] -translate-y-1/2 text-brass/[0.07]" />
+        <TavernTable className="mx-auto my-8 w-full max-w-lg [mask-image:linear-gradient(to_bottom,black_78%,transparent)]" />
         <div className="relative max-w-md">
           <p className="font-display text-4xl leading-tight italic">“Vocês se encontram numa taverna…”</p>
           <p className="mt-4 text-lg text-moss">
@@ -29,9 +30,12 @@ export function AuthLayout({
       </aside>
       <main className="flex flex-col justify-center px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <Die className="size-7 text-brass" />
-            <span className="font-display text-2xl font-bold">Taverna</span>
+          <div className="mb-6 flex flex-col items-center gap-4 lg:hidden">
+            <TavernTable className="w-full max-w-72 [mask-image:linear-gradient(to_bottom,black_78%,transparent)]" />
+            <div className="flex items-center gap-2 self-start">
+              <Die className="size-7 text-brass" />
+              <span className="font-display text-2xl font-bold">Taverna</span>
+            </div>
           </div>
           <h1 className="text-3xl">{title}</h1>
           <p className="mt-1 mb-8 text-moss">{subtitle}</p>
