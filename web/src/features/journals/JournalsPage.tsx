@@ -64,7 +64,7 @@ export function JournalsPage() {
                       }
                     >
                       <span className="min-w-0 flex-1 truncate">{page.title}</span>
-                      <AccessIcon level={page.defaultAccess} className="size-3.5 shrink-0 opacity-60" />
+                      <AccessIcon level={page.defaultAccess} className="size-3.5 shrink-0 opacity-70" />
                     </NavLink>
                   </li>
                 ))}
@@ -76,14 +76,6 @@ export function JournalsPage() {
       <section className={cn('min-w-0', !pageId && 'max-md:hidden')}>
         <Outlet context={context} />
       </section>
-    </div>
-  )
-}
-
-export function JournalIndex() {
-  return (
-    <div className="grid h-full min-h-64 place-items-center rounded-panel border border-dashed border-line-strong p-8 text-center text-moss">
-      <p className="max-w-xs">Escolha uma página na lista ou crie uma nova.</p>
     </div>
   )
 }
