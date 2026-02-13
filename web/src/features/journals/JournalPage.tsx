@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { Button, EmptyState, ErrorNote, Input, Skeleton } from '@/components/ui'
+import { Badge, Button, EmptyState, ErrorNote, Input, Skeleton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { timeAgo } from '@/lib/format'
 import { renderMarkdown } from '@/lib/markdown'
@@ -97,20 +97,21 @@ function Editor({ page }: { page: JournalDto }) {
           {ACCESS_TEXT[page.defaultAccess]}
           {Object.keys(page.grants).length > 0 && `, com exceções`}
         </span>
+        {!editable && <Badge>Só leitura</Badge>}
         <span className="text-sm text-moss-dim">
           por {page.authorName}, {timeAgo(page.updatedAt)}
         </span>
         <div className="ml-auto flex gap-1">
           {editable && (
-            <div className="flex rounded-control border border-line p-0.5" role="tablist" aria-label="Modo">
+            <div className="flex rounded-control border border-line-strong p-0.5" role="group" aria-label="Modo da página">
               {(['write', 'read'] as const).map((value) => (
                 <button
                   key={value}
-                  role="tab"
-                  aria-selected={mode === value}
+                  type="button"
+                  aria-pressed={mode === value}
                   onClick={() => setMode(value)}
                   className={cn(
-                    'rounded-[0.35rem] px-3 py-1 text-sm',
+                    'rounded-[0.35rem] px-3 py-1.5 text-sm pointer-coarse:py-2.5',
                     mode === value ? 'bg-surface-raised text-bone' : 'text-moss hover:text-bone'
                   )}
                 >

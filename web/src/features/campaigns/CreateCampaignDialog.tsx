@@ -43,7 +43,7 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
         >
           {create.error && <ErrorNote>{create.error.message}</ErrorNote>}
           <Field label="Nome" error={errors.name?.message}>
-            {(props) => <Input autoFocus placeholder="As Minas de Pedraluz" {...props} {...register('name')} />}
+            {(props) => <Input placeholder="As Minas de Pedraluz" {...props} {...register('name')} />}
           </Field>
           <Field label="Sobre a campanha" error={errors.description?.message} hint="Opcional. Aparece no convite.">
             {(props) => (

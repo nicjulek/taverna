@@ -15,10 +15,10 @@
   --color-surface: #1f2f29;
   --color-surface-raised: #283b34;
   --color-line: #33493f;
-  --color-line-strong: #4a6458;
+  --color-line-strong: #5d7a6b;
   --color-bone: #ece4d4;
   --color-moss: #9aab9f;
-  --color-moss-dim: #74867b;
+  --color-moss-dim: #8fa094;
   --color-brass: #d6a446;
   --color-brass-bright: #e8bb5f;
   --color-brass-ink: #1d1708;
@@ -75,6 +75,10 @@
 }
 
 @layer components {
+  .skip-link {
+    @apply fixed top-2 left-2 z-50 -translate-y-16 rounded-control bg-brass px-4 py-2 font-medium text-brass-ink transition-transform focus-visible:translate-y-0;
+  }
+
   .prose-taverna {
     @apply text-bone;
     line-height: 1.65;

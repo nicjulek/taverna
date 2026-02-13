@@ -112,7 +112,7 @@ function DeleteSection() {
         }
       >
         <Field label="Nome da campanha">
-          {(props) => <Input value={typed} onChange={(event) => setTyped(event.target.value)} autoFocus {...props} />}
+          {(props) => <Input value={typed} onChange={(event) => setTyped(event.target.value)} {...props} />}
         </Field>
       </ConfirmDialog>
     </section>

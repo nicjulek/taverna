@@ -6,12 +6,14 @@ export function Token({
   color,
   size = 'md',
   online,
+  decorative,
   className
 }: {
   name: string
   color: string
   size?: 'sm' | 'md'
   online?: boolean
+  decorative?: boolean
   className?: string
 }) {
   return (
@@ -23,11 +25,12 @@ export function Token({
       )}
       style={{ background: color, boxShadow: `0 0 0 2px var(--color-felt), 0 0 0 3.5px ${color}66` }}
       title={name}
+      role={decorative ? undefined : 'img'}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : online === undefined ? name : `${name}, ${online ? 'na mesa agora' : 'fora da mesa'}`}
     >
       {initials(name)}
-      {online && (
-        <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-felt bg-leaf" aria-label="online" />
-      )}
+      {online && <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-felt bg-leaf" aria-hidden />}
     </span>
   )
 }

@@ -36,6 +36,14 @@ export function ShareDialog({ campaignId, page, members, open, onOpenChange }: S
       <DialogContent title="Quem vê esta página" description="O autor e os mestres sempre podem ver e editar.">
         <div className="flex flex-col gap-5">
           {update.error && <ErrorNote>{update.error.message}</ErrorNote>}
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm text-moss">
+            <dt className="font-medium text-bone">Sem acesso</dt>
+            <dd>a página nem aparece na lista</dd>
+            <dt className="font-medium text-bone">Pode ver</dt>
+            <dd>lê, mas não muda nada</dd>
+            <dt className="font-medium text-bone">Pode editar</dt>
+            <dd>escreve junto com você</dd>
+          </dl>
           <div className="flex items-center justify-between gap-4 rounded-control bg-felt-deep px-3 py-2.5">
             <span className="font-medium">Todos os jogadores</span>
             <Select

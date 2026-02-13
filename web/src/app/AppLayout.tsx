@@ -27,16 +27,17 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <a href="#conteudo" className="skip-link">
+        Pular para o conteúdo
+      </a>
       <header className="sticky top-0 z-30 border-b border-line/70 bg-felt/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Wordmark />
           <Dropdown>
-            <DropdownTrigger
-              className="flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm text-moss hover:text-bone"
-              aria-label="Sua conta"
-            >
-              <span className="hidden sm:inline">{user.displayName}</span>
-              <Token name={user.displayName} color={user.color} size="sm" />
+            <DropdownTrigger className="flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm text-moss hover:text-bone">
+              <span className="sr-only sm:not-sr-only">{user.displayName}</span>
+              <span className="sr-only">(menu da conta)</span>
+              <Token name={user.displayName} color={user.color} size="sm" decorative />
             </DropdownTrigger>
             <DropdownContent>
               <DropdownLabel>{user.email}</DropdownLabel>
@@ -51,7 +52,9 @@ export function AppLayout() {
           </Dropdown>
         </div>
       </header>
-      <Outlet />
+      <main id="conteudo" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
+        <Outlet />
+      </main>
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} user={user} />
     </div>
   )

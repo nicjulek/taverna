@@ -36,7 +36,6 @@ export function JoinDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           <Field label="Link ou código do convite" error={error}>
             {(props) => (
               <Input
-                autoFocus
                 placeholder="https://…/convite/aB3dE9xYz1Qw"
                 value={value}
                 onChange={(event) => {

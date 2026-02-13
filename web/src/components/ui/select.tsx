@@ -18,7 +18,7 @@ export function Select<T extends string>({ value, onChange, options, label, clas
       <SelectPrimitive.Trigger
         aria-label={label}
         className={cn(
-          'inline-flex items-center justify-between gap-2 rounded-control border border-line bg-felt-deep px-3 text-left text-bone hover:border-line-strong focus-visible:border-brass disabled:opacity-60',
+          'inline-flex items-center justify-between gap-2 rounded-control border border-line-strong bg-felt-deep px-3 text-left text-bone hover:border-moss-dim focus-visible:border-brass disabled:opacity-60',
           size === 'sm' ? 'h-8 text-sm' : 'h-10',
           className
         )}

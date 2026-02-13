@@ -11,10 +11,10 @@ export const buttonVariants = cva(
         danger: 'border border-seal/60 text-seal-soft hover:bg-seal hover:text-bone'
       },
       size: {
-        sm: 'h-8 px-3 text-sm',
+        sm: 'h-8 px-3 text-sm pointer-coarse:h-10',
         md: 'h-10 px-4',
         lg: 'h-12 px-5 text-lg',
-        icon: 'size-9'
+        icon: 'size-10 pointer-coarse:size-11'
       }
     },
     defaultVariants: { variant: 'primary', size: 'md' }

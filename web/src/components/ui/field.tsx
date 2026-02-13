@@ -2,7 +2,7 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Texta
 import { cn } from '@/lib/cn'
 
 const control =
-  'w-full rounded-control border border-line bg-felt-deep px-3 text-bone placeholder:text-moss-dim transition-colors hover:border-line-strong focus-visible:border-brass focus-visible:outline-none aria-[invalid=true]:border-seal'
+  'w-full rounded-control border border-line-strong bg-felt-deep px-3 text-bone placeholder:text-moss-dim transition-colors hover:border-moss-dim focus-visible:border-brass focus-visible:outline-none aria-[invalid=true]:border-seal'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(({ className, ...props }, ref) => (
   <input ref={ref} className={cn(control, 'h-10', className)} {...props} />
