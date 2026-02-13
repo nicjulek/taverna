@@ -23,10 +23,18 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist')
       pinoHttp: {
         level: process.env.NODE_ENV === 'test' ? 'silent' : 'info',
         transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
-        autoLogging: { ignore: (req) => req.url === '/api/health' }
+        autoLogging: { ignore: (req) => req.url === '/api/health' },
+        serializers: {
+          req: (req: { id: unknown; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url }),
+          res: (res: { statusCode: number }) => ({ statusCode: res.statusCode })
+        }
       }
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 300 }],
+      errorMessage: 'Muitas tentativas seguidas. Espere um minuto e tente de novo.',
+      skipIf: () => process.env.THROTTLE === 'off'
+    }),
     ...(existsSync(webDist) ? [ServeStaticModule.forRoot({ rootPath: webDist, exclude: ['/api/{*path}', '/socket.io/{*path}'] })] : []),
     DatabaseModule,
     RealtimeModule,

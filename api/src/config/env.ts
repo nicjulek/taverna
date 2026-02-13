@@ -6,7 +6,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET precisa de pelo menos 16 caracteres'),
   WEB_ORIGIN: z.string().default('http://localhost:5173'),
-  UPLOAD_DIR: z.string().default('uploads')
+  UPLOAD_DIR: z.string().default('uploads'),
+  THROTTLE: z.enum(['on', 'off']).default('on')
 })
 
 export type Env = z.infer<typeof envSchema>
