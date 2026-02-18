@@ -20,8 +20,8 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@taverna/shared": "*",
     "@tanstack/react-query": "^5.90.2",
+    "@taverna/shared": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.7",
@@ -38,6 +38,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "~1.63.0",
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/jest-dom": "^6.9.1",

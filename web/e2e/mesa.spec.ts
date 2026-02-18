@@ -45,7 +45,7 @@ test('mestre cria a campanha, convida um jogador e compartilha só o que quer', 
   await expect(player.getByRole('link', { name: 'O Lich é o prefeito' })).toHaveCount(0)
   await player.getByRole('link', { name: 'Rumores da vila' }).click()
   await expect(player.locator('.prose-taverna strong')).toHaveText('luzes')
-  await expect(player.getByRole('tab', { name: 'Escrever' })).toHaveCount(0)
+  await expect(player.getByRole('button', { name: 'Escrever' })).toHaveCount(0)
 
   await expect(gm.getByText('2 na mesa agora')).toBeVisible()
   await expect(gm.getByText('Bardo', { exact: true })).toBeVisible()

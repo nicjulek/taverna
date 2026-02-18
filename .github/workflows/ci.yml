@@ -71,6 +71,7 @@ jobs:
       DATABASE_URL: postgres://taverna:taverna@localhost:5432/taverna
       JWT_SECRET: segredo-do-ci-da-taverna-123
       WEB_ORIGIN: http://localhost:5173
+      THROTTLE: 'off'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

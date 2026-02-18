@@ -16,6 +16,7 @@ export default defineConfig({
     {
       command: 'npm run start:dev',
       cwd: '../api',
+      env: { THROTTLE: 'off' },
       url: 'http://localhost:3000/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000
