@@ -13,25 +13,40 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Diário** em Markdown, com pastas e busca. Cada página tem permissão própria: secreta, todos leem ou todos editam, e exceções por jogador. O autor e os mestres sempre podem tudo.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
-| Jogadores e convite | Quem vê cada página |
-| --- | --- |
+| Entrar                      | Primeiros passos do mestre          |
+| --------------------------- | ----------------------------------- |
+| ![Entrar](docs/entrar.webp) | ![Prepare a mesa](docs/passos.webp) |
+
+| Jogadores e convite               | Quem vê cada página                 |
+| --------------------------------- | ----------------------------------- |
 | ![Jogadores](docs/jogadores.webp) | ![Permissões](docs/permissoes.webp) |
 
-| Editor | Suas mesas |
-| --- | --- |
-| ![Editor](docs/editor.webp) | ![Suas mesas](docs/mesas.webp) |
+| Convite                       | Suas mesas                     |
+| ----------------------------- | ------------------------------ |
+| ![Convite](docs/convite.webp) | ![Suas mesas](docs/mesas.webp) |
 
-<p align="center"><img src="docs/celular.webp" alt="Taverna no celular" width="260" /></p>
+<p align="center">
+  <img src="docs/celular-entrar.webp" alt="Entrar pelo celular" width="240" />
+  <img src="docs/celular.webp" alt="Campanha no celular" width="240" />
+</p>
+
+## Design e acessibilidade
+
+- **Identidade própria:** feltro verde de mesa de jogo, latão dos dados e papel cor de osso, com a família Alegreya. Cada campanha ganha um selo de lacre com as iniciais e uma paisagem gerada a partir dela no cabeçalho.
+- **Ilustrações próprias em SVG**, feitas para o projeto: a mesa da taverna no login, a mesa vazia, o livro do diário, a carta com lacre do convite (e o lacre partido quando o convite não vale mais) e o d20 tirando 1 nas telas de erro.
+- **Pensado para quem chega pelo celular:** o convite abre direto no telefone, cria a conta e volta sozinho para a campanha.
+- **Primeiros passos do mestre:** depois de criar a campanha, um painel guia os três passos até a primeira sessão e marca cada um quando é feito.
+- **WCAG 2.1 AA:** contraste conferido em todos os tokens, link para pular o cabeçalho, foco que volta para quem abriu cada diálogo, alvos de 44 px em telas de toque e nomes acessíveis nos avatares e ícones. O teste `acessibilidade.spec.ts` roda o **axe** em 8 telas e falha se aparecer qualquer violação.
 
 ## Stack
 
-| Camada | Tecnologias |
-| --- | --- |
-| Front-end | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query, React Hook Form, Zod, Radix UI |
-| Back-end | NestJS 11, Drizzle ORM, PostgreSQL, Socket.IO, JWT em cookie httpOnly, Helmet, rate limit, logs com Pino |
-| Compartilhado | Pacote `@taverna/shared` com schemas Zod, tipos e eventos do WebSocket usados pela API e pelo front |
-| Testes | Jest e Supertest com banco real na API, Vitest e Testing Library no front, Playwright com dois navegadores (mestre e jogador) |
-| Entrega | Docker multi-stage, Docker Compose, GitHub Actions |
+| Camada        | Tecnologias                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Front-end     | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query, React Hook Form, Zod, Radix UI                                                            |
+| Back-end      | NestJS 11, Drizzle ORM, PostgreSQL, Socket.IO, JWT em cookie httpOnly, Helmet, rate limit, logs com Pino                                                            |
+| Compartilhado | Pacote `@taverna/shared` com schemas Zod, tipos e eventos do WebSocket usados pela API e pelo front                                                                 |
+| Testes        | Jest e Supertest com banco real na API, Vitest e Testing Library no front, Playwright com dois navegadores (mestre e jogador) e auditoria de acessibilidade com axe |
+| Entrega       | Docker multi-stage, Docker Compose, GitHub Actions                                                                                                                  |
 
 ## Arquitetura
 
@@ -55,7 +70,7 @@ taverna/
 └── web/                 React
     ├── src/
     │   ├── app/         rotas, layout, guards
-    │   ├── components/  design system
+    │   ├── components/  design system e ilustrações em SVG
     │   ├── features/    uma pasta por tela
     │   └── lib/         cliente HTTP, socket, markdown
     └── e2e/             Playwright
@@ -82,11 +97,11 @@ No PowerShell, troque o `cp` por `copy api\.env.example api\.env`.
 
 Abra http://localhost:5173. O seed cria a campanha **As Minas de Pedraluz** com três contas, todas com a senha `taverna123`:
 
-| Conta | Papel |
-| --- | --- |
-| mestre@taverna.dev | Mestre |
-| ana@taverna.dev | Co-mestre |
-| bruno@taverna.dev | Jogador |
+| Conta              | Papel     |
+| ------------------ | --------- |
+| mestre@taverna.dev | Mestre    |
+| ana@taverna.dev    | Co-mestre |
+| bruno@taverna.dev  | Jogador   |
 
 Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas anônima).
 
@@ -95,7 +110,7 @@ Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas an
 ```bash
 npm test                    # unitários da API e do front
 npm run test:e2e -w api     # integração da API com PostgreSQL
-npm run test:e2e -w web     # Playwright com mestre e jogador ao mesmo tempo
+npm run test:e2e -w web     # Playwright: mestre e jogador ao mesmo tempo, e acessibilidade com axe
 npm run lint
 npm run typecheck
 ```
@@ -106,27 +121,27 @@ Os testes de integração usam o banco `taverna_test`, criado automaticamente pe
 
 Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sessão.
 
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| POST | `/auth/register`, `/auth/login`, `/auth/logout` | Sessão |
-| GET, PATCH | `/auth/me` | Perfil |
-| GET, POST | `/campaigns` | Suas campanhas e criar |
-| GET, PATCH, DELETE | `/campaigns/:id` | Detalhes, editar e apagar |
-| POST, DELETE | `/campaigns/:id/invite` | Gerar ou desativar o link |
-| GET | `/invites/:code` | Prévia do convite |
-| POST | `/invites/:code/accept` | Entrar na campanha |
-| GET | `/campaigns/:id/members` | Participantes |
-| PATCH, DELETE | `/campaigns/:id/members/:userId` | Mudar papel e remover |
-| GET, POST | `/campaigns/:id/journals` | Páginas visíveis e criar |
-| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId` | Ler, editar, permissões e apagar |
-| GET | `/health` | Saúde da API e do banco |
+| Método             | Rota                                            | Descrição                        |
+| ------------------ | ----------------------------------------------- | -------------------------------- |
+| POST               | `/auth/register`, `/auth/login`, `/auth/logout` | Sessão                           |
+| GET, PATCH         | `/auth/me`                                      | Perfil                           |
+| GET, POST          | `/campaigns`                                    | Suas campanhas e criar           |
+| GET, PATCH, DELETE | `/campaigns/:id`                                | Detalhes, editar e apagar        |
+| POST, DELETE       | `/campaigns/:id/invite`                         | Gerar ou desativar o link        |
+| GET                | `/invites/:code`                                | Prévia do convite                |
+| POST               | `/invites/:code/accept`                         | Entrar na campanha               |
+| GET                | `/campaigns/:id/members`                        | Participantes                    |
+| PATCH, DELETE      | `/campaigns/:id/members/:userId`                | Mudar papel e remover            |
+| GET, POST          | `/campaigns/:id/journals`                       | Páginas visíveis e criar         |
+| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`               | Ler, editar, permissões e apagar |
+| GET                | `/health`                                       | Saúde da API e do banco          |
 
-| Evento (Socket.IO) | Direção | O que faz |
-| --- | --- | --- |
-| `campaign:join`, `campaign:leave` | cliente → servidor | Entrar e sair da sala da campanha |
-| `presence:list` | servidor → cliente | Quem está na mesa agora |
-| `campaign:changed` | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
-| `campaign:removed` | servidor → cliente | Você saiu ou foi removido |
+| Evento (Socket.IO)                | Direção            | O que faz                                      |
+| --------------------------------- | ------------------ | ---------------------------------------------- |
+| `campaign:join`, `campaign:leave` | cliente → servidor | Entrar e sair da sala da campanha              |
+| `presence:list`                   | servidor → cliente | Quem está na mesa agora                        |
+| `campaign:changed`                | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
+| `campaign:removed`                | servidor → cliente | Você saiu ou foi removido                      |
 
 ## Deploy
 
