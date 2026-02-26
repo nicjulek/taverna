@@ -1,4 +1,4 @@
-import { DiceNode, Node } from './ast'
+import { type DiceNode, type Node } from './ast'
 import { parse } from './parser'
 
 export interface RollStats {

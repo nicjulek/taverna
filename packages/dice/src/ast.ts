@@ -67,7 +67,10 @@ export function toNotation(node: Node): string {
     case 'negate':
       return `-${toNotation(node.value)}`
     case 'binary': {
-      const right = node.right.type === 'binary' && PRECEDENCE[node.right.op] <= PRECEDENCE[node.op] ? `(${toNotation(node.right)})` : toNotation(node.right)
+      const right =
+        node.right.type === 'binary' && PRECEDENCE[node.right.op] <= PRECEDENCE[node.op]
+          ? `(${toNotation(node.right)})`
+          : toNotation(node.right)
       return `${toNotation(node.left)} ${node.op} ${right}`
     }
   }

@@ -102,7 +102,10 @@ group('roll', () => {
 
   it('sortudo e vantagem juntos', () => {
     const result = roll('2d20r1kh1', sequenceRng([1, 9, 14]))
-    expect(result.terms[0]?.dice).toEqual([{ value: 14, rerolledFrom: 1 }, { value: 9, dropped: true }])
+    expect(result.terms[0]?.dice).toEqual([
+      { value: 14, rerolledFrom: 1 },
+      { value: 9, dropped: true }
+    ])
     expect(result.total).toBe(14)
   })
 

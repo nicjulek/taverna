@@ -1,4 +1,4 @@
-import { DiceError, DiceNode, LIMITS, Modifier, Node } from './ast'
+import { DiceError, type DiceNode, LIMITS, type Modifier, type Node } from './ast'
 
 export interface ParsedRoll {
   ast: Node
@@ -132,10 +132,8 @@ class Parser {
 
   private selection(kind: 'keep' | 'drop', which: 'high' | 'low', count: number, start: number): Modifier {
     const amount = isDigit(this.src[this.pos]) ? this.number() : 1
-    if (kind === 'keep' && (amount < 1 || amount > count))
-      throw new DiceError(`Dá para manter de 1 a ${count} dados aqui`, start)
-    if (kind === 'drop' && (amount < 1 || amount >= count))
-      throw new DiceError(`Dá para descartar de 1 a ${count - 1} dados aqui`, start)
+    if (kind === 'keep' && (amount < 1 || amount > count)) throw new DiceError(`Dá para manter de 1 a ${count} dados aqui`, start)
+    if (kind === 'drop' && (amount < 1 || amount >= count)) throw new DiceError(`Dá para descartar de 1 a ${count - 1} dados aqui`, start)
     return { kind, which, amount }
   }
 

@@ -1,6 +1,6 @@
-import { collectDice, DiceError, DiceNode, diceNotation, LIMITS, Node, toNotation } from './ast'
+import { collectDice, DiceError, type DiceNode, diceNotation, LIMITS, type Node, toNotation } from './ast'
 import { parse } from './parser'
-import { cryptoRng, Rng } from './rng'
+import { cryptoRng, type Rng } from './rng'
 
 export interface Die {
   value: number
