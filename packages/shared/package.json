@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@taverna/dice": "*",
     "zod": "^4.1.12"
   },
   "devDependencies": {
