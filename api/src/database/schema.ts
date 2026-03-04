@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm'
+import type { RollResult } from '@taverna/dice'
 import { index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import type { AccessLevel, Role, RuleSystemId } from '@taverna/shared'
+import type { AccessLevel, Role, RollVisibility, RuleSystemId } from '@taverna/shared'
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 const updatedAt = () =>
@@ -63,6 +64,24 @@ export const journals = pgTable(
     updatedAt: updatedAt()
   },
   (table) => [index('journals_campaign_idx').on(table.campaignId)]
+)
+
+export const rolls = pgTable(
+  'rolls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    label: text('label').notNull().default(''),
+    visibility: text('visibility').$type<RollVisibility>().notNull().default('public'),
+    result: jsonb('result').$type<RollResult>().notNull(),
+    createdAt: createdAt()
+  },
+  (table) => [index('rolls_campaign_created_idx').on(table.campaignId, table.createdAt)]
 )
 
 export const usersRelations = relations(users, ({ many }) => ({
