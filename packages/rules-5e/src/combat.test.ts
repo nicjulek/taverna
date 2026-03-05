@@ -1,7 +1,7 @@
 import { roll, sequenceRng } from '@taverna/dice'
 import { getSystem } from '@taverna/rules-core'
 import { describe, expect, it } from 'vitest'
-import { criticalDamage, d20, damageWhileDying, deathSave, dnd5e, judgeAttack, judgeCheck } from './index'
+import { criticalDamage, d20, withMode, damageWhileDying, deathSave, dnd5e, judgeAttack, judgeCheck } from './index'
 
 describe('d20', () => {
   it.each([
@@ -14,6 +14,20 @@ describe('d20', () => {
     [2, { mode: 'advantage', rerollOnes: true }, '2d20r1kh1+2']
   ] as const)('bônus %d com %j vira %s', (bonus, options, expression) => {
     expect(d20(bonus, options)).toBe(expression)
+  })
+})
+
+describe('vantagem numa rolagem escrita', () => {
+  it.each([
+    ['1d20+5', 'advantage', '2d20kh1 + 5'],
+    ['d20-1', 'disadvantage', '2d20kl1 - 1'],
+    ['1d20r1+2', 'advantage', '2d20r1kh1 + 2'],
+    ['1d20+1d4', 'advantage', '2d20kh1 + 1d4'],
+    ['2d20kh1', 'disadvantage', '2d20kh1'],
+    ['2d6+3', 'advantage', '2d6+3'],
+    ['1d20+5', 'normal', '1d20+5']
+  ] as const)('%s com %s vira %s', (expression, mode, result) => {
+    expect(withMode(expression, mode)).toBe(result)
   })
 })
 

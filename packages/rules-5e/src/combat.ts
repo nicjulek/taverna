@@ -1,10 +1,30 @@
 import { mapDice, parse, type RollResult, toNotation } from '@taverna/dice'
-import { type CheckOptions, type RollOutcome, withBonus } from '@taverna/rules-core'
+import { type CheckOptions, type RollMode, type RollOutcome, withBonus } from '@taverna/rules-core'
 
 export function d20(bonus: number, { mode = 'normal', rerollOnes = false }: CheckOptions = {}): string {
   const reroll = rerollOnes ? 'r1' : ''
   const base = mode === 'advantage' ? `2d20${reroll}kh1` : mode === 'disadvantage' ? `2d20${reroll}kl1` : `1d20${reroll}`
   return withBonus(base, bonus)
+}
+
+export function withMode(expression: string, mode: RollMode): string {
+  if (mode === 'normal') return expression
+  const { ast } = parse(expression)
+  let changed = false
+  const next = mapDice(ast, (dice) => {
+    const selects = dice.modifiers.some((m) => m.kind === 'keep' || m.kind === 'drop')
+    if (dice.sides !== 20 || dice.count !== 1 || selects) return dice
+    changed = true
+    return {
+      ...dice,
+      count: 2,
+      modifiers: [
+        ...dice.modifiers,
+        { kind: 'keep' as const, which: mode === 'advantage' ? ('high' as const) : ('low' as const), amount: 1 }
+      ]
+    }
+  })
+  return changed ? toNotation(next) : expression
 }
 
 export function criticalDamage(expression: string): string {
