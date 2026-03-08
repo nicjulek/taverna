@@ -7,6 +7,7 @@ import { InvitePage } from '@/features/invites/InvitePage'
 import { JournalPage } from '@/features/journals/JournalPage'
 import { JournalIndex } from '@/features/journals/JournalIndex'
 import { JournalsPage } from '@/features/journals/JournalsPage'
+import { DicePage } from '@/features/dice/DicePage'
 import { MembersPage } from '@/features/members/MembersPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { AppLayout } from './AppLayout'
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
                       { path: ':pageId', element: <JournalPage /> }
                     ]
                   },
+                  { path: 'dados', element: <DicePage /> },
                   { path: 'jogadores', element: <MembersPage /> },
                   { path: 'ajustes', element: <SettingsPage /> }
                 ]
