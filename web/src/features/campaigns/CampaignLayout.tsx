@@ -1,17 +1,21 @@
 import { isGameMaster, ROLE_LABELS } from '@taverna/shared'
-import { BookOpen, Settings, Users } from 'lucide-react'
-import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { BookOpen, Dices, Settings, Users } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
+import { toast } from 'sonner'
 import { CriticalFail } from '@/components/art/CriticalFail'
 import { Landscape } from '@/components/art/Landscape'
 import { Badge, Button, EmptyState, Seal, Skeleton, Token } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { useCampaignRoom } from '@/lib/realtime'
+import { useSession } from '@/lib/session'
+import { useRollFeed } from '../dice/hooks'
 import type { CampaignContext } from './context'
 import { useCampaign } from './hooks'
 
 const TABS = [
   { to: 'diario', label: 'Diário', icon: BookOpen },
+  { to: 'dados', label: 'Dados', icon: Dices },
   { to: 'jogadores', label: 'Jogadores', icon: Users },
   { to: 'ajustes', label: 'Ajustes', icon: Settings }
 ]
@@ -20,6 +24,12 @@ export function CampaignLayout() {
   const { campaignId = '' } = useParams()
   const { data: campaign, error, isPending } = useCampaign(campaignId)
   const { online, connected } = useCampaignRoom(campaignId)
+  const { pathname } = useLocation()
+  const { data: me } = useSession()
+  useRollFeed(campaignId, (roll) => {
+    if (roll.userId === me?.id || pathname.endsWith('/dados')) return
+    toast(`${roll.displayName} rolou ${roll.result.total}`, { description: roll.label || roll.result.expression })
+  })
 
   if (error) {
     const notFound = error instanceof ApiError && error.status === 404
