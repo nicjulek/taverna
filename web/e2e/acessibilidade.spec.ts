@@ -31,6 +31,14 @@ test('as telas principais passam no axe (WCAG 2.1 AA)', async ({ page }) => {
   await expect(page.getByLabel('Título')).toHaveValue('Página sem título')
   await audit(page, 'editor')
 
+  await page.getByRole('link', { name: 'Dados' }).click()
+  await expect(page.getByRole('heading', { name: 'Nenhum dado rolado ainda' })).toBeVisible()
+  await audit(page, 'dados vazio')
+  await page.getByRole('button', { name: 'Vantagem', exact: true }).click()
+  await page.getByRole('button', { name: 'Rolar', exact: true }).click()
+  await expect(page.getByRole('article')).toHaveCount(1)
+  await audit(page, 'dados com rolagem')
+
   await page.getByRole('link', { name: 'Jogadores' }).click()
   await expect(page.getByRole('heading', { name: 'Convite' })).toBeVisible()
   await audit(page, 'jogadores')
