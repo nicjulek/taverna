@@ -19,7 +19,7 @@
     "test": "npm run build:packages && npm test -w packages/dice -w packages/rules-core -w packages/rules-5e && npm test -w api && npm test -w web",
     "test:e2e": "npm run test:e2e -w api && npm run test:e2e -w web",
     "lint": "eslint .",
-    "typecheck": "npm run build:packages && npm run typecheck -w api && npm run typecheck -w web",
+    "typecheck": "npm run build:packages && npm run typecheck -w packages/dice -w packages/rules-core -w packages/rules-5e -w api -w web",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
