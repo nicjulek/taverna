@@ -11,6 +11,8 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Convite por link**: o mestre copia o link e quem abrir entra como jogador. Dá para gerar outro link (o antigo para de funcionar) ou desativar o convite.
 - **Papéis**: mestre, co-mestre e jogador. O mestre promove e remove participantes, o co-mestre ajuda a organizar e qualquer jogador pode sair.
 - **Diário** em Markdown, com pastas e busca. Cada página tem permissão própria: secreta, todos leem ou todos editam, e exceções por jogador. O autor e os mestres sempre podem tudo.
+- **Dados**: rolador com a notação completa (vantagem, manter e descartar, explosão, rerrolar e contas), montado pelos botões ou escrito à mão, com faixa e média antes de rolar. Quem rola escolhe se todos veem, só os mestres ou só ela. O servidor rola, para ninguém trapacear, e a mesa vê o resultado na hora.
+- **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
 | Entrar                      | Primeiros passos do mestre          |
@@ -25,9 +27,12 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 | ----------------------------- | ------------------------------ |
 | ![Convite](docs/convite.webp) | ![Suas mesas](docs/mesas.webp) |
 
+![Dados](docs/dados.webp)
+
 <p align="center">
   <img src="docs/celular-entrar.webp" alt="Entrar pelo celular" width="240" />
   <img src="docs/celular.webp" alt="Campanha no celular" width="240" />
+  <img src="docs/celular-dados.webp" alt="Rolagens no celular" width="240" />
 </p>
 
 ## Design e acessibilidade
@@ -53,6 +58,9 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 ```
 taverna/
 ├── packages/
+│   ├── dice/            parser e rolador da notação de dados, com mínimo, máximo e média
+│   ├── rules-core/      interface do motor de regras, que não conhece nenhum sistema
+│   ├── rules-5e/        regras do D&D 5e
 │   └── shared/          schemas, tipos, papéis, permissões e eventos do tempo real
 ├── api/                 NestJS
 │   ├── drizzle/         migrations SQL
@@ -65,6 +73,7 @@ taverna/
 │   │       ├── campaigns/   campanhas, convites, papéis e acesso
 │   │       ├── journals/    diário com permissões
 │   │       ├── realtime/    gateway Socket.IO, salas e presença
+│   │       ├── rolls/       rolagens feitas no servidor
 │   │       └── health/
 │   └── test/            testes de integração com PostgreSQL
 └── web/                 React
@@ -79,6 +88,21 @@ taverna/
 A regra de permissão vive em `packages/shared`, então a API e o front usam a mesma função para decidir quem vê e quem edita. Na API, toda rota de campanha passa pelo `CampaignAccessService`, e quem não participa recebe 404 em vez de 403, para não revelar que a campanha existe.
 
 O tempo real usa uma sala do Socket.IO por campanha. A conexão se autentica pelo mesmo cookie da API, e entrar na sala exige ser participante. Depois de cada alteração, os serviços avisam a sala e o front só invalida a consulta certa no TanStack Query.
+
+## Notação de dados
+
+| Escreva              | O que faz                                                       |
+| -------------------- | --------------------------------------------------------------- |
+| `1d20+5`             | Um d20 mais 5                                                   |
+| `2d20kh1`            | Vantagem: rola dois e fica com o maior (`kl1` fica com o menor) |
+| `4d6dl1`             | Rola quatro e descarta o menor (`dh` descarta o maior)          |
+| `2d6r2`              | Rerrola uma vez os resultados até 2                             |
+| `3d6!`               | Explode: cada 6 rola mais um dado                               |
+| `d%`                 | O mesmo que `1d100`                                             |
+| `(1d8+3)*2`          | Contas com parênteses, `*` e `/` (arredonda para baixo)         |
+| `8d6 # Bola de fogo` | O que vem depois do `#` vira o rótulo                           |
+
+O `packages/dice` não sabe nada de D&D. As regras ficam no `packages/rules-5e`, que se registra no `rules-core` pelo id `dnd5e`. Por isso outro sistema entra como um pacote novo, sem mexer no rolador nem nas telas.
 
 ## Como rodar
 
@@ -108,7 +132,7 @@ Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas an
 ## Testes
 
 ```bash
-npm test                    # unitários da API e do front
+npm test                    # unitários dos pacotes, da API e do front
 npm run test:e2e -w api     # integração da API com PostgreSQL
 npm run test:e2e -w web     # Playwright: mestre e jogador ao mesmo tempo, e acessibilidade com axe
 npm run lint
@@ -134,6 +158,7 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | PATCH, DELETE      | `/campaigns/:id/members/:userId`                | Mudar papel e remover            |
 | GET, POST          | `/campaigns/:id/journals`                       | Páginas visíveis e criar         |
 | GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`               | Ler, editar, permissões e apagar |
+| GET, POST          | `/campaigns/:id/rolls`                          | Rolagens visíveis e rolar        |
 | GET                | `/health`                                       | Saúde da API e do banco          |
 
 | Evento (Socket.IO)                | Direção            | O que faz                                      |
@@ -142,6 +167,7 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | `presence:list`                   | servidor → cliente | Quem está na mesa agora                        |
 | `campaign:changed`                | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
 | `campaign:removed`                | servidor → cliente | Você saiu ou foi removido                      |
+| `roll:new`                        | servidor → cliente | Rolagem nova, só para quem pode ver            |
 
 ## Deploy
 
