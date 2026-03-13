@@ -1,4 +1,6 @@
+import { roll } from '@taverna/dice'
 import bcrypt from 'bcryptjs'
+import type { RollVisibility } from '@taverna/shared'
 import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
@@ -78,6 +80,30 @@ async function seed(): Promise<void> {
       content: 'Não confio na capitã. Ela sabe mais do que conta.'
     }
   ])
+
+  const start = Date.now() - 20 * 60_000
+  const rolls: { user: typeof gm; expression: string; visibility?: RollVisibility }[] = [
+    { user: gm, expression: '1d20+2 # Iniciativa dos kobolds' },
+    { user: ana, expression: '1d20+3 # Iniciativa' },
+    { user: bruno, expression: '1d20+1 # Iniciativa' },
+    { user: bruno, expression: '2d20kh1+5 # Ataque com arco longo' },
+    { user: bruno, expression: '1d8+3 # Dano' },
+    { user: ana, expression: '1d20+6 # Furtividade', visibility: 'gm' },
+    { user: gm, expression: '1d6+2 # Lança do kobold' }
+  ]
+  await db.insert(schema.rolls).values(
+    rolls.map(({ user, expression, visibility = 'public' }, index) => {
+      const result = roll(expression)
+      return {
+        campaignId: campaign!.id,
+        userId: user.id,
+        label: result.label,
+        visibility,
+        result,
+        createdAt: new Date(start + index * 90_000)
+      }
+    })
+  )
 
   const check = await db.query.campaigns.findFirst({ where: eq(schema.campaigns.id, campaign!.id) })
   console.log(`Campanha de demonstração criada: ${check?.name}`)
