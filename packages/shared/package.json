@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@taverna/dice": "*",
+    "@taverna/rules-5e": "*",
     "zod": "^4.1.12"
   },
   "devDependencies": {
