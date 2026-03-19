@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm'
 import type { RollResult } from '@taverna/dice'
-import { index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import type { Sheet5e } from '@taverna/rules-5e'
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import type { AccessLevel, Role, RollVisibility, RuleSystemId } from '@taverna/shared'
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
@@ -64,6 +65,25 @@ export const journals = pgTable(
     updatedAt: updatedAt()
   },
   (table) => [index('journals_campaign_idx').on(table.campaignId)]
+)
+
+export const characters = pgTable(
+  'characters',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    sheet: jsonb('sheet').$type<Sheet5e>().notNull(),
+    version: integer('version').notNull().default(1),
+    defaultAccess: text('default_access').$type<AccessLevel>().notNull().default('view'),
+    grants: jsonb('grants').$type<Record<string, AccessLevel>>().notNull().default({}),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [index('characters_campaign_idx').on(table.campaignId)]
 )
 
 export const rolls = pgTable(

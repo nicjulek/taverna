@@ -29,6 +29,13 @@
       "when": 1794501653553,
       "tag": "0003_rolagens",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794506654206,
+      "tag": "0004_fichas",
+      "breakpoints": true
     }
   ]
 }
