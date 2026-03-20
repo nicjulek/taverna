@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { ClientToServerEvents, RollDto, ServerToClientEvents } from '@taverna/shared'
+import { ChangeScope, ClientToServerEvents, RollDto, ServerToClientEvents } from '@taverna/shared'
 import { Server } from 'socket.io'
 
 export type TavernaServer = Server<ClientToServerEvents, ServerToClientEvents>
@@ -15,8 +15,8 @@ export class RealtimeService {
     this.server = server
   }
 
-  changed(campaignId: string, scope: 'members' | 'journals' | 'campaign'): void {
-    this.server?.to(campaignRoom(campaignId)).emit('campaign:changed', { campaignId, scope })
+  changed(campaignId: string, scope: ChangeScope, id?: string): void {
+    this.server?.to(campaignRoom(campaignId)).emit('campaign:changed', { campaignId, scope, id })
   }
 
   roll(roll: RollDto, userIds?: string[]): void {
