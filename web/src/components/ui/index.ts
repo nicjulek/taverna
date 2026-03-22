@@ -1,3 +1,4 @@
+export * from './access-dialog'
 export * from './button'
 export * from './button-variants'
 export * from './dialog'
