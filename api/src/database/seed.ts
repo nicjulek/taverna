@@ -1,4 +1,5 @@
 import { roll } from '@taverna/dice'
+import { newSheet, type Sheet5e } from '@taverna/rules-5e'
 import bcrypt from 'bcryptjs'
 import type { RollVisibility } from '@taverna/shared'
 import { eq, inArray } from 'drizzle-orm'
@@ -79,6 +80,55 @@ async function seed(): Promise<void> {
       folder: 'Pessoal',
       content: 'Não confio na capitã. Ela sabe mais do que conta.'
     }
+  ])
+
+  const lia: Sheet5e = {
+    ...newSheet({ classKey: 'rogue', level: 3, race: 'Halfling' }),
+    background: 'Criminosa',
+    alignment: 'Caótica e boa',
+    abilities: { str: 8, dex: 17, con: 14, int: 12, wis: 13, cha: 10 },
+    skills: {
+      stealth: 'expertise',
+      'sleight-of-hand': 'expertise',
+      perception: 'proficient',
+      acrobatics: 'proficient',
+      deception: 'proficient',
+      investigation: 'proficient'
+    },
+    halflingLucky: true,
+    armorClass: 14,
+    hp: { current: 17, max: 24, temporary: 0 },
+    attacks: [
+      { id: 'adaga', name: 'Adaga', ability: 'dex', proficient: true, bonus: 0, damage: '1d4', damageType: 'perfurante' },
+      { id: 'arco', name: 'Arco curto', ability: 'dex', proficient: true, bonus: 0, damage: '1d6', damageType: 'perfurante' }
+    ],
+    notes: 'Deve 30 peças de ouro ao Corvo Cinzento. Não conta para ninguém.'
+  }
+  const doran: Sheet5e = {
+    ...newSheet({ classKey: 'cleric', level: 3, race: 'Anão da montanha' }),
+    background: 'Acólito',
+    abilities: { str: 14, dex: 8, con: 15, int: 10, wis: 16, cha: 12 },
+    skills: { medicine: 'proficient', religion: 'proficient', insight: 'proficient', history: 'proficient' },
+    armorClass: 18,
+    speed: 8,
+    hp: { current: 27, max: 27, temporary: 0 },
+    slotsUsed: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+    concentration: 'Bênção',
+    spells: [
+      { id: 'chama', name: 'Chama sagrada', level: 0, prepared: true, notes: '' },
+      { id: 'taumaturgia', name: 'Taumaturgia', level: 0, prepared: true, notes: '' },
+      { id: 'bencao', name: 'Bênção', level: 1, prepared: true, notes: '' },
+      { id: 'curar', name: 'Curar ferimentos', level: 1, prepared: true, notes: '' },
+      { id: 'escudo', name: 'Escudo da fé', level: 1, prepared: false, notes: '' },
+      { id: 'arma', name: 'Arma espiritual', level: 2, prepared: true, notes: '' }
+    ],
+    attacks: [
+      { id: 'martelo', name: 'Martelo de guerra', ability: 'str', proficient: true, bonus: 0, damage: '1d8', damageType: 'concussão' }
+    ]
+  }
+  await db.insert(schema.characters).values([
+    { campaignId: campaign!.id, ownerId: ana.id, name: 'Lia Pés-Leves', sheet: lia },
+    { campaignId: campaign!.id, ownerId: bruno.id, name: 'Doran Martelo-de-Brasa', sheet: doran }
   ])
 
   const start = Date.now() - 20 * 60_000
