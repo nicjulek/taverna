@@ -31,6 +31,20 @@ test('as telas principais passam no axe (WCAG 2.1 AA)', async ({ page }) => {
   await expect(page.getByLabel('Título')).toHaveValue('Página sem título')
   await audit(page, 'editor')
 
+  await page.getByRole('link', { name: 'Fichas' }).click()
+  await expect(page.getByRole('heading', { name: 'Nenhuma ficha ainda' })).toBeVisible()
+  await audit(page, 'fichas vazio')
+  await page.getByRole('button', { name: 'Nova ficha' }).click()
+  await audit(page, 'dialogo nova ficha')
+  await page.getByLabel('Nome do personagem').fill('Auditor')
+  await page.getByRole('button', { name: 'Criar ficha' }).click()
+  await expect(page.getByText('Tudo salvo')).toBeVisible()
+  await audit(page, 'ficha')
+  for (const tab of ['Magias', 'Recursos', 'Detalhes']) {
+    await page.getByRole('tab', { name: tab }).click()
+    await audit(page, `ficha ${tab}`)
+  }
+
   await page.getByRole('link', { name: 'Dados' }).click()
   await expect(page.getByRole('heading', { name: 'Nenhum dado rolado ainda' })).toBeVisible()
   await audit(page, 'dados vazio')
