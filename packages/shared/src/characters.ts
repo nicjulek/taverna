@@ -120,7 +120,7 @@ export const updateCharacterSchema = z.object({
 })
 
 export type CreateCharacterInput = z.input<typeof createCharacterSchema>
-export type UpdateCharacterInput = z.infer<typeof updateCharacterSchema>
+export type UpdateCharacterInput = Omit<z.infer<typeof updateCharacterSchema>, 'sheet'> & { sheet?: Sheet5e }
 
 export interface CharacterSummaryDto {
   id: string
