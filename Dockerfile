@@ -1,6 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/dice/package.json packages/dice/
+COPY packages/rules-core/package.json packages/rules-core/
+COPY packages/rules-5e/package.json packages/rules-5e/
 COPY packages/shared/package.json packages/shared/
 COPY api/package.json api/
 COPY web/package.json web/
@@ -12,13 +15,20 @@ FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/dice/package.json packages/dice/
+COPY packages/rules-core/package.json packages/rules-core/
+COPY packages/rules-5e/package.json packages/rules-5e/
 COPY packages/shared/package.json packages/shared/
 COPY api/package.json api/
 COPY web/package.json web/
-RUN npm ci --omit=dev -w api -w packages/shared --include-workspace-root=false && npm cache clean --force
+RUN npm ci --omit=dev -w api -w packages/shared -w packages/dice -w packages/rules-core -w packages/rules-5e --include-workspace-root=false && npm cache clean --force
+COPY --from=build /app/packages/dice/dist packages/dice/dist
+COPY --from=build /app/packages/rules-core/dist packages/rules-core/dist
+COPY --from=build /app/packages/rules-5e/dist packages/rules-5e/dist
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/api/dist api/dist
 COPY --from=build /app/api/drizzle api/drizzle
+COPY --from=build /app/api/srd api/srd
 COPY --from=build /app/web/dist web/dist
 USER node
 EXPOSE 3000
