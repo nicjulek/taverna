@@ -12,6 +12,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Papéis**: mestre, co-mestre e jogador. O mestre promove e remove participantes, o co-mestre ajuda a organizar e qualquer jogador pode sair.
 - **Diário** em Markdown, com pastas e busca. Cada página tem permissão própria: secreta, todos leem ou todos editam, e exceções por jogador. O autor e os mestres sempre podem tudo.
 - **Dados**: rolador com a notação completa (vantagem, manter e descartar, explosão, rerrolar e contas), montado pelos botões ou escrito à mão, com faixa e média antes de rolar. Quem rola escolhe se todos veem, só os mestres ou só ela. O servidor rola, para ninguém trapacear, e a mesa vê o resultado na hora.
+- **Fichas de D&D 5e**: atributos, salvaguardas e perícias com especialização e pau para toda obra, PV e PV temporário, testes contra a morte, dados de vida, descanso curto e longo, ataques com dano e crítico, magias com espaços por círculo, pacto e concentração, e contadores de classe (Ki, Fúria, Dados de Superioridade, Inspiração Bárdica, Pontos de Feitiçaria) ou livres. Tudo que tem número rola com um clique, com vantagem ou desvantagem, e a ficha se salva sozinha. O dono e os mestres editam; o resto do grupo vê, a não ser que o dono esconda.
 - **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
@@ -27,12 +28,15 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 | ----------------------------- | ------------------------------ |
 | ![Convite](docs/convite.webp) | ![Suas mesas](docs/mesas.webp) |
 
+![Ficha](docs/ficha.webp)
+
 ![Dados](docs/dados.webp)
 
 <p align="center">
   <img src="docs/celular-entrar.webp" alt="Entrar pelo celular" width="240" />
   <img src="docs/celular.webp" alt="Campanha no celular" width="240" />
   <img src="docs/celular-dados.webp" alt="Rolagens no celular" width="240" />
+  <img src="docs/celular-ficha.webp" alt="Ficha no celular" width="240" />
 </p>
 
 ## Design e acessibilidade
@@ -73,6 +77,7 @@ taverna/
 │   │       ├── campaigns/   campanhas, convites, papéis e acesso
 │   │       ├── journals/    diário com permissões
 │   │       ├── realtime/    gateway Socket.IO, salas e presença
+│   │       ├── characters/  fichas com permissão e versão
 │   │       ├── rolls/       rolagens feitas no servidor
 │   │       └── health/
 │   └── test/            testes de integração com PostgreSQL
@@ -101,6 +106,8 @@ O tempo real usa uma sala do Socket.IO por campanha. A conexão se autentica pel
 | `d%`                 | O mesmo que `1d100`                                             |
 | `(1d8+3)*2`          | Contas com parênteses, `*` e `/` (arredonda para baixo)         |
 | `8d6 # Bola de fogo` | O que vem depois do `#` vira o rótulo                           |
+
+A ficha se salva sozinha um instante depois de cada mudança. Cada gravação leva o número da versão que a tela tinha; se o mestre e a jogadora editarem ao mesmo tempo, a segunda gravação volta com 409 e a tela carrega a versão nova em vez de apagar o que a outra pessoa fez.
 
 O `packages/dice` não sabe nada de D&D. As regras ficam no `packages/rules-5e`, que se registra no `rules-core` pelo id `dnd5e`. Por isso outro sistema entra como um pacote novo, sem mexer no rolador nem nas telas.
 
@@ -158,6 +165,8 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | PATCH, DELETE      | `/campaigns/:id/members/:userId`                | Mudar papel e remover            |
 | GET, POST          | `/campaigns/:id/journals`                       | Páginas visíveis e criar         |
 | GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`               | Ler, editar, permissões e apagar |
+| GET, POST          | `/campaigns/:id/characters`                     | Fichas visíveis e criar          |
+| GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`        | Ler, editar, permissões e apagar |
 | GET, POST          | `/campaigns/:id/rolls`                          | Rolagens visíveis e rolar        |
 | GET                | `/health`                                       | Saúde da API e do banco          |
 
