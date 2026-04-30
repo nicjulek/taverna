@@ -6,7 +6,7 @@ export interface PresenceDto {
   color: string
 }
 
-export type ChangeScope = 'members' | 'journals' | 'campaign' | 'characters'
+export type ChangeScope = 'members' | 'journals' | 'campaign' | 'characters' | 'compendium'
 
 export interface ServerToClientEvents {
   'presence:list': (users: PresenceDto[]) => void
