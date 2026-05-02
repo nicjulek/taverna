@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm'
 import type { RollResult } from '@taverna/dice'
 import type { Sheet5e } from '@taverna/rules-5e'
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import type { AccessLevel, Role, RollVisibility, RuleSystemId } from '@taverna/shared'
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import type { AccessLevel, CompendiumKind, Role, RollVisibility, RuleSystemId } from '@taverna/shared'
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 const updatedAt = () =>
@@ -84,6 +84,32 @@ export const characters = pgTable(
     updatedAt: updatedAt()
   },
   (table) => [index('characters_campaign_idx').on(table.campaignId)]
+)
+
+export const compendiumEntries = pgTable(
+  'compendium_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    system: text('system').$type<RuleSystemId>().notNull().default('dnd5e'),
+    campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: text('kind').$type<CompendiumKind>().notNull(),
+    slug: text('slug'),
+    name: text('name').notNull(),
+    summary: text('summary').notNull().default(''),
+    lang: text('lang').notNull().default('pt-BR'),
+    meta: jsonb('meta').$type<Record<string, unknown>>().notNull().default({}),
+    body: text('body').notNull().default(''),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+    published: boolean('published').notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [
+    uniqueIndex('compendium_slug_idx').on(table.system, table.slug),
+    index('compendium_kind_name_idx').on(table.system, table.kind, table.name),
+    index('compendium_campaign_idx').on(table.campaignId)
+  ]
 )
 
 export const rolls = pgTable(
