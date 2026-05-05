@@ -55,6 +55,24 @@ for (const s of load('en', 'Spells')) {
 }
 
 const ABILITY = { strength: 'str', dexterity: 'dex', constitution: 'con', intelligence: 'int', wisdom: 'wis', charisma: 'cha' }
+const SIZES = { Tiny: 'Miúdo', Small: 'Pequeno', Medium: 'Médio', Large: 'Grande', Huge: 'Enorme', Gargantuan: 'Imenso' }
+const TYPES = {
+  aberration: 'aberração',
+  beast: 'fera',
+  celestial: 'celestial',
+  construct: 'constructo',
+  dragon: 'dragão',
+  elemental: 'elemental',
+  fey: 'fada',
+  fiend: 'corruptor',
+  giant: 'gigante',
+  humanoid: 'humanoide',
+  monstrosity: 'monstruosidade',
+  ooze: 'limo',
+  plant: 'planta',
+  swarm: 'enxame',
+  undead: 'morto-vivo'
+}
 const crLabel = (cr) => (cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr))
 const action = (a) => ({
   name: a.name,
@@ -71,7 +89,7 @@ for (const m of load('en', 'Monsters')) {
     m.index,
     m.name,
     'en',
-    `${m.size} ${m.type}, ND ${crLabel(m.challenge_rating)}`,
+    `${TYPES[m.type.startsWith('swarm') ? 'swarm' : m.type] ?? m.type} ${(SIZES[m.size] ?? m.size).toLowerCase()}, ND ${crLabel(m.challenge_rating)}`,
     {
       cr: m.challenge_rating,
       crLabel: crLabel(m.challenge_rating),
@@ -107,6 +125,13 @@ for (const m of load('en', 'Monsters')) {
 }
 
 const CATEGORY = { weapon: 'weapon', armor: 'armor', 'adventuring-gear': 'gear', tools: 'tool', 'mounts-and-vehicles': 'mount' }
+const WEAPON = {
+  'Simple Melee': 'Arma simples corpo a corpo',
+  'Simple Ranged': 'Arma simples à distância',
+  'Martial Melee': 'Arma marcial corpo a corpo',
+  'Martial Ranged': 'Arma marcial à distância'
+}
+const ARMOR = { Light: 'Armadura leve', Medium: 'Armadura média', Heavy: 'Armadura pesada', Shield: 'Escudo' }
 const cost = (c) => (c ? `${c.quantity} ${c.unit}` : '')
 for (const e of load('en', 'Equipment')) {
   const category = CATEGORY[e.equipment_category.index] ?? 'gear'
@@ -118,9 +143,9 @@ for (const e of load('en', 'Equipment')) {
     e.name,
     'en',
     weapon
-      ? `${e.category_range} weapon, ${e.damage?.damage_dice ?? '—'}`
+      ? `${WEAPON[e.category_range] ?? e.category_range}, ${e.damage?.damage_dice ?? '—'}`
       : armor
-        ? `${e.armor_category} armor, CA ${e.armor_class?.base}`
+        ? `${ARMOR[e.armor_category] ?? e.armor_category}, CA ${e.armor_class?.base}`
         : (e.gear_category?.name ?? e.equipment_category.name),
     { category, rarity: null, cost: cost(e.cost), weight: e.weight ?? null },
     text(e.desc),
