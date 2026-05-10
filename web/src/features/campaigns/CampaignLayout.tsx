@@ -1,5 +1,5 @@
 import { isGameMaster, ROLE_LABELS } from '@taverna/shared'
-import { BookOpen, Dices, ScrollText, Settings, Users } from 'lucide-react'
+import { BookMarked, BookOpen, Dices, ScrollText, Settings, Users } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { CriticalFail } from '@/components/art/CriticalFail'
@@ -17,6 +17,7 @@ const TABS = [
   { to: 'diario', label: 'Diário', icon: BookOpen },
   { to: 'fichas', label: 'Fichas', icon: ScrollText },
   { to: 'dados', label: 'Dados', icon: Dices },
+  { to: 'compendio', label: 'Compêndio', icon: BookMarked },
   { to: 'jogadores', label: 'Jogadores', icon: Users },
   { to: 'ajustes', label: 'Ajustes', icon: Settings }
 ]

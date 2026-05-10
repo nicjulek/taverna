@@ -9,6 +9,7 @@ import { JournalIndex } from '@/features/journals/JournalIndex'
 import { JournalsPage } from '@/features/journals/JournalsPage'
 import { CharactersPage } from '@/features/characters/CharactersPage'
 import { CharacterPage } from '@/features/characters/sheet/CharacterPage'
+import { CompendiumPage } from '@/features/compendium/CompendiumPage'
 import { DicePage } from '@/features/dice/DicePage'
 import { MembersPage } from '@/features/members/MembersPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -54,6 +55,13 @@ export const router = createBrowserRouter([
                     children: [
                       { index: true, element: <CharactersPage /> },
                       { path: ':characterId', element: <CharacterPage /> }
+                    ]
+                  },
+                  {
+                    path: 'compendio',
+                    children: [
+                      { index: true, element: <CompendiumPage /> },
+                      { path: ':entryId', element: <CompendiumPage /> }
                     ]
                   },
                   { path: 'dados', element: <DicePage /> },
