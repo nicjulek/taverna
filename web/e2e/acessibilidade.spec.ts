@@ -45,6 +45,16 @@ test('as telas principais passam no axe (WCAG 2.1 AA)', async ({ page }) => {
     await audit(page, `ficha ${tab}`)
   }
 
+  await page.getByRole('link', { name: 'Compêndio' }).click()
+  await page.getByRole('button', { name: 'Monstros', exact: true }).click()
+  await page.getByLabel('Procurar no compêndio').fill('goblin')
+  await page.getByRole('link', { name: /^Goblin/ }).click()
+  await expect(page.getByRole('heading', { name: 'Goblin' })).toBeVisible()
+  await audit(page, 'compendio monstro')
+  await page.getByRole('button', { name: 'Novo homebrew' }).click()
+  await audit(page, 'dialogo homebrew')
+  await page.keyboard.press('Escape')
+
   await page.getByRole('link', { name: 'Dados' }).click()
   await expect(page.getByRole('heading', { name: 'Nenhum dado rolado ainda' })).toBeVisible()
   await audit(page, 'dados vazio')
