@@ -1,15 +1,21 @@
 import * as Tabs from '@radix-ui/react-tabs'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, BookMarked } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { CriticalFail } from '@/components/art/CriticalFail'
 import { Button, EmptyState, Skeleton } from '@/components/ui'
+import { cn } from '@/lib/cn'
+import { DRAG_TYPE } from '../../compendium/to-sheet'
 import { ApiError } from '@/lib/api'
 import { useCampaignContext } from '../../campaigns/context'
 import { useCharacter } from '../hooks'
 import { AbilitiesPanel, SkillsPanel } from './Abilities'
 import { AttacksTab } from './Attacks'
+import { CompendiumPanel } from './CompendiumPanel'
+import { readDrop, useAddFromCompendium } from './use-add-from-compendium'
 import { SheetProvider } from './context'
 import { DetailsTab } from './Details'
+import { useSheet } from './sheet-context'
 import { SheetHeader } from './Header'
 import { ResourcesTab } from './Resources'
 import { SpellsTab } from './Spells'
@@ -63,27 +69,68 @@ export function CharacterPage() {
           <SkillsPanel />
           <div className="flex min-w-0 flex-col gap-4">
             <VitalsPanel />
-            <Tabs.Root defaultValue="ataques" className="rounded-panel border border-line bg-surface/70">
-              <Tabs.List className="flex gap-1 overflow-x-auto border-b border-line px-2" aria-label="Partes da ficha">
-                {TABS.map((tab) => (
-                  <Tabs.Trigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="-mb-px border-b-2 border-transparent px-3 py-3 whitespace-nowrap text-moss hover:text-bone data-[state=active]:border-brass data-[state=active]:text-bone"
-                  >
-                    {tab.label}
-                  </Tabs.Trigger>
-                ))}
-              </Tabs.List>
-              {TABS.map(({ value, content: Content }) => (
-                <Tabs.Content key={value} value={value} className="p-4 focus-visible:outline-none">
-                  <Content />
-                </Tabs.Content>
-              ))}
-            </Tabs.Root>
+            <SheetTabs />
           </div>
         </div>
       </div>
     </SheetProvider>
+  )
+}
+
+function SheetTabs() {
+  const { editable } = useSheet()
+  const [tab, setTab] = useState('ataques')
+  const [panel, setPanel] = useState(false)
+  const [over, setOver] = useState(false)
+  const show = (target: 'spell' | 'attack') => setTab(target === 'spell' ? 'magias' : 'ataques')
+  const add = useAddFromCompendium(show)
+
+  return (
+    <>
+      <Tabs.Root
+        value={tab}
+        onValueChange={setTab}
+        className={cn('rounded-panel border bg-surface/70 transition-colors', over ? 'border-brass border-dashed' : 'border-line')}
+        onDragOver={(event) => {
+          if (!editable || !event.dataTransfer.types.includes(DRAG_TYPE)) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          setOver(false)
+          const payload = readDrop(event)
+          if (!payload || !editable) return
+          event.preventDefault()
+          void add(payload.id)
+        }}
+      >
+        <div className="flex items-center border-b border-line pr-2">
+          <Tabs.List className="flex flex-1 gap-1 overflow-x-auto px-2" aria-label="Partes da ficha">
+            {TABS.map((item) => (
+              <Tabs.Trigger
+                key={item.value}
+                value={item.value}
+                className="-mb-px border-b-2 border-transparent px-3 py-3 whitespace-nowrap text-moss hover:text-bone data-[state=active]:border-brass data-[state=active]:text-bone"
+              >
+                {item.label}
+              </Tabs.Trigger>
+            ))}
+          </Tabs.List>
+          {editable && (
+            <Button variant="ghost" size="sm" onClick={() => setPanel(true)} aria-expanded={panel}>
+              <BookMarked /> Compêndio
+            </Button>
+          )}
+        </div>
+        {TABS.map(({ value, content: Content }) => (
+          <Tabs.Content key={value} value={value} className="p-4 focus-visible:outline-none">
+            <Content />
+          </Tabs.Content>
+        ))}
+      </Tabs.Root>
+      <CompendiumPanel open={panel} onClose={() => setPanel(false)} onAdded={show} />
+    </>
   )
 }
