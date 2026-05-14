@@ -131,6 +131,64 @@ async function seed(): Promise<void> {
     { campaignId: campaign!.id, ownerId: bruno.id, name: 'Doran Martelo-de-Brasa', sheet: doran }
   ])
 
+  await db.insert(schema.compendiumEntries).values([
+    {
+      campaignId: campaign!.id,
+      authorId: gm.id,
+      kind: 'item',
+      name: 'Cristal de Pedraluz',
+      summary: 'Itens mágicos, incomum',
+      meta: { category: 'magic', rarity: 'uncommon', cost: '', weight: null },
+      body: 'Brilha com luz fraca num raio de 3 metros quando há minério a menos de 30 metros. Uma vez por descanso longo, quem segura pode quebrar o cristal para ter vantagem num teste de Sabedoria (Percepção) feito no subterrâneo.',
+      published: true
+    },
+    {
+      campaignId: campaign!.id,
+      authorId: gm.id,
+      kind: 'monster',
+      name: 'Kobold das minas',
+      summary: 'Humanoide pequeno, ND 1/4',
+      meta: { cr: 0.25, crLabel: '1/4', type: 'humanoid', size: 'Small', ac: 13, hp: 7, xp: 50 },
+      body: 'Os kobolds que tomaram a mina antiga conhecem cada túnel e preparam armadilhas com pedras soltas.',
+      data: {
+        alignment: 'leal e mau',
+        armorClass: [{ value: 13, type: 'couro batido' }],
+        hitPoints: 7,
+        hitDice: '3d6-3',
+        speed: { walk: '9 m' },
+        abilities: { str: 7, dex: 15, con: 9, int: 8, wis: 7, cha: 8 },
+        senses: { 'visão no escuro': '18 m', 'percepção passiva': 8 },
+        languages: 'Comum, Dracônico',
+        traits: [
+          {
+            name: 'Táticas de bando',
+            desc: 'Tem vantagem no ataque quando um aliado está a 1,5 m do alvo.',
+            attackBonus: null,
+            damage: [],
+            dc: null
+          }
+        ],
+        actions: [
+          {
+            name: 'Picareta',
+            desc: 'Ataque corpo a corpo: +4 para acertar, alcance 1,5 m. Acerto: 4 (1d4+2) de dano perfurante.',
+            attackBonus: 4,
+            damage: [{ dice: '1d4+2', type: 'Perfurante' }],
+            dc: null
+          },
+          {
+            name: 'Pedra solta',
+            desc: 'Derruba pedras do teto. Criaturas numa área de 3 m fazem salvaguarda de Destreza CD 11 ou sofrem 2d6 de dano de concussão.',
+            attackBonus: null,
+            damage: [{ dice: '2d6', type: 'Concussão' }],
+            dc: { ability: 'dex', value: 11 }
+          }
+        ]
+      },
+      published: false
+    }
+  ])
+
   const start = Date.now() - 20 * 60_000
   const rolls: { user: typeof gm; expression: string; visibility?: RollVisibility }[] = [
     { user: gm, expression: '1d20+2 # Iniciativa dos kobolds' },
