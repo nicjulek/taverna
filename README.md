@@ -13,6 +13,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Diário** em Markdown, com pastas e busca. Cada página tem permissão própria: secreta, todos leem ou todos editam, e exceções por jogador. O autor e os mestres sempre podem tudo.
 - **Dados**: rolador com a notação completa (vantagem, manter e descartar, explosão, rerrolar e contas), montado pelos botões ou escrito à mão, com faixa e média antes de rolar. Quem rola escolhe se todos veem, só os mestres ou só ela. O servidor rola, para ninguém trapacear, e a mesa vê o resultado na hora.
 - **Fichas de D&D 5e**: atributos, salvaguardas e perícias com especialização e pau para toda obra, PV e PV temporário, testes contra a morte, dados de vida, descanso curto e longo, ataques com dano e crítico, magias com espaços por círculo, pacto e concentração, e contadores de classe (Ki, Fúria, Dados de Superioridade, Inspiração Bárdica, Pontos de Feitiçaria) ou livres. Tudo que tem número rola com um clique, com vantagem ou desvantagem, e a ficha se salva sozinha. O dono e os mestres editam; o resto do grupo vê, a não ser que o dono esconda.
+- **Compêndio**: as 1.155 entradas do SRD 5.1 (319 magias, 334 monstros, 476 itens, condições, raças, talento e antecedente), com busca e filtros por círculo, escola, classe, tipo de criatura, nível de desafio, categoria e raridade. Os monstros abrem numa ficha de pergaminho em que ataque, dano, PV e atributos rolam com um clique, e as rolagens do mestre ficam secretas. O mestre cria homebrew de magias, itens, monstros, condições e talentos, do zero ou copiando uma entrada do SRD, e publica quando quiser. Magias e armas vão para a ficha arrastando ou pelo botão de adicionar.
 - **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
@@ -29,6 +30,8 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 | ![Convite](docs/convite.webp) | ![Suas mesas](docs/mesas.webp) |
 
 ![Ficha](docs/ficha.webp)
+
+![Compêndio](docs/compendio.webp)
 
 ![Dados](docs/dados.webp)
 
@@ -78,6 +81,7 @@ taverna/
 │   │       ├── journals/    diário com permissões
 │   │       ├── realtime/    gateway Socket.IO, salas e presença
 │   │       ├── characters/  fichas com permissão e versão
+│   │       ├── compendium/  busca no SRD e homebrew da campanha
 │   │       ├── rolls/       rolagens feitas no servidor
 │   │       └── health/
 │   └── test/            testes de integração com PostgreSQL
@@ -110,6 +114,14 @@ O tempo real usa uma sala do Socket.IO por campanha. A conexão se autentica pel
 A ficha se salva sozinha um instante depois de cada mudança. Cada gravação leva o número da versão que a tela tinha; se o mestre e a jogadora editarem ao mesmo tempo, a segunda gravação volta com 409 e a tela carrega a versão nova em vez de apagar o que a outra pessoa fez.
 
 O `packages/dice` não sabe nada de D&D. As regras ficam no `packages/rules-5e`, que se registra no `rules-core` pelo id `dnd5e`. Por isso outro sistema entra como um pacote novo, sem mexer no rolador nem nas telas.
+
+## Compêndio e SRD 5.1
+
+O SRD vem do projeto aberto [5e-database](https://github.com/5e-bits/5e-database). O script `api/scripts/build-srd.mjs` converte os arquivos dele para o formato da Taverna e gera `api/srd/srd-5.1.json.gz`, que a migração importa sozinha (`npm run db:migrate`). Rodar de novo atualiza as entradas sem duplicar.
+
+Condições, raças, talento e antecedente usam a tradução em português do próprio 5e-database. Magias, monstros e itens ainda estão com o texto original em inglês, com os nomes de escola, tipo de criatura, categoria e dano traduzidos; a interface avisa quando o texto é em inglês. Quem quiser a versão em português de uma entrada pode copiá-la para homebrew e traduzir.
+
+Este trabalho inclui material do System Reference Document 5.1 (SRD 5.1) da Wizards of the Coast LLC, disponível em https://dnd.wizards.com/resources/systems-reference-document. O SRD 5.1 está licenciado sob a [Creative Commons Atribuição 4.0 Internacional](https://creativecommons.org/licenses/by/4.0/legalcode).
 
 ## Como rodar
 
@@ -167,6 +179,8 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`               | Ler, editar, permissões e apagar |
 | GET, POST          | `/campaigns/:id/characters`                     | Fichas visíveis e criar          |
 | GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`        | Ler, editar, permissões e apagar |
+| GET, POST          | `/campaigns/:id/compendium`                     | Buscar e criar homebrew          |
+| GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`            | Ler, editar e apagar homebrew    |
 | GET, POST          | `/campaigns/:id/rolls`                          | Rolagens visíveis e rolar        |
 | GET                | `/health`                                       | Saúde da API e do banco          |
 
