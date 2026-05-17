@@ -73,6 +73,7 @@ const TYPES = {
   swarm: 'enxame',
   undead: 'morto-vivo'
 }
+const capitalize = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 const crLabel = (cr) => (cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr))
 const action = (a) => ({
   name: a.name,
@@ -89,7 +90,9 @@ for (const m of load('en', 'Monsters')) {
     m.index,
     m.name,
     'en',
-    `${TYPES[m.type.startsWith('swarm') ? 'swarm' : m.type] ?? m.type} ${(SIZES[m.size] ?? m.size).toLowerCase()}, ND ${crLabel(m.challenge_rating)}`,
+    capitalize(
+      `${TYPES[m.type.startsWith('swarm') ? 'swarm' : m.type] ?? m.type} ${(SIZES[m.size] ?? m.size).toLowerCase()}, ND ${crLabel(m.challenge_rating)}`
+    ),
     {
       cr: m.challenge_rating,
       crLabel: crLabel(m.challenge_rating),

@@ -50,7 +50,7 @@ export class CompendiumService {
       .select()
       .from(e)
       .where(and(...filters))
-      .orderBy(query.kind === 'spell' ? sql`(${meta('level')})::int` : sql`1`, asc(e.name))
+      .orderBy(...(query.kind === 'spell' ? [sql`(${meta('level')})::int`, asc(e.name)] : [asc(e.name)]))
       .limit(COMPENDIUM_PAGE_SIZE + 1)
       .offset(query.offset)
     return { items: rows.slice(0, COMPENDIUM_PAGE_SIZE).map((row) => this.toSummary(row)), hasMore: rows.length > COMPENDIUM_PAGE_SIZE }

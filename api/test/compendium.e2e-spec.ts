@@ -47,6 +47,9 @@ describe('compêndio', () => {
     expect(page.items.length).toBeGreaterThan(3)
     expect(page.items.every((m) => Number(m.meta.cr) <= 0.25 && m.meta.type === 'humanoid')).toBe(true)
     expect(page.items.map((m) => m.name)).toContain('Goblin')
+    const names = page.items.map((m) => m.name)
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })))
+    expect(page.items.find((m) => m.name === 'Goblin')?.summary).toBe('Humanoide pequeno, ND 1/4')
   })
 
   it('pagina e trata caracteres especiais na busca', async () => {
