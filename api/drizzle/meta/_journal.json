@@ -43,6 +43,13 @@
       "when": 1794519287179,
       "tag": "0005_compendio",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794522143853,
+      "tag": "0006_mesa",
+      "breakpoints": true
     }
   ]
 }

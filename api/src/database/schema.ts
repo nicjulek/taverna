@@ -1,8 +1,31 @@
 import { relations } from 'drizzle-orm'
 import type { RollResult } from '@taverna/dice'
 import type { Sheet5e } from '@taverna/rules-5e'
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-import type { AccessLevel, CompendiumKind, Role, RollVisibility, RuleSystemId } from '@taverna/shared'
+import {
+  boolean,
+  customType,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid
+} from 'drizzle-orm/pg-core'
+import type {
+  AccessLevel,
+  AssetMime,
+  CompendiumKind,
+  Role,
+  RollVisibility,
+  RuleSystemId,
+  SceneItemKind,
+  SceneLayer,
+  SceneSettings
+} from '@taverna/shared'
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 const updatedAt = () =>
@@ -110,6 +133,77 @@ export const compendiumEntries = pgTable(
     index('compendium_kind_name_idx').on(table.system, table.kind, table.name),
     index('compendium_campaign_idx').on(table.campaignId)
   ]
+)
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea'
+})
+
+export const assets = pgTable(
+  'assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    uploaderId: uuid('uploader_id').references(() => users.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    mime: text('mime').$type<AssetMime>().notNull(),
+    size: integer('size').notNull(),
+    createdAt: createdAt()
+  },
+  (table) => [index('assets_campaign_idx').on(table.campaignId)]
+)
+
+export const assetBlobs = pgTable('asset_blobs', {
+  assetId: uuid('asset_id')
+    .primaryKey()
+    .references(() => assets.id, { onDelete: 'cascade' }),
+  data: bytea('data').notNull()
+})
+
+export const scenes = pgTable(
+  'scenes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    active: boolean('active').notNull().default(false),
+    settings: jsonb('settings').$type<SceneSettings>().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [index('scenes_campaign_idx').on(table.campaignId)]
+)
+
+export const sceneItems = pgTable(
+  'scene_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sceneId: uuid('scene_id')
+      .notNull()
+      .references(() => scenes.id, { onDelete: 'cascade' }),
+    layer: text('layer').$type<SceneLayer>().notNull(),
+    kind: text('kind').$type<SceneItemKind>().notNull(),
+    x: doublePrecision('x').notNull(),
+    y: doublePrecision('y').notNull(),
+    width: doublePrecision('width').notNull(),
+    height: doublePrecision('height').notNull(),
+    rotation: doublePrecision('rotation').notNull().default(0),
+    flipX: boolean('flip_x').notNull().default(false),
+    flipY: boolean('flip_y').notNull().default(false),
+    locked: boolean('locked').notNull().default(false),
+    z: integer('z').notNull().default(0),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [index('scene_items_scene_idx').on(table.sceneId)]
 )
 
 export const rolls = pgTable(
