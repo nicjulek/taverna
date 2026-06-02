@@ -11,6 +11,8 @@ import { DatabaseModule } from './database/database.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { CampaignsModule } from './modules/campaigns/campaigns.module'
 import { JournalsModule } from './modules/journals/journals.module'
+import { AssetsModule } from './modules/assets/assets.module'
+import { ScenesModule } from './modules/scenes/scenes.module'
 import { CompendiumModule } from './modules/compendium/compendium.module'
 import { CharactersModule } from './modules/characters/characters.module'
 import { RollsModule } from './modules/rolls/rolls.module'
@@ -46,7 +48,9 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist')
     JournalsModule,
     RollsModule,
     CharactersModule,
-    CompendiumModule
+    CompendiumModule,
+    AssetsModule,
+    ScenesModule
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
