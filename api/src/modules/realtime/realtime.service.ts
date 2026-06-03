@@ -19,6 +19,17 @@ export class RealtimeService {
     this.server?.to(campaignRoom(campaignId)).emit('campaign:changed', { campaignId, scope, id })
   }
 
+  emit<E extends keyof ServerToClientEvents>(
+    target: { campaignId: string } | { userIds: string[] },
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void {
+    if (!this.server) return
+    const rooms = 'campaignId' in target ? campaignRoom(target.campaignId) : target.userIds.map(userRoom)
+    if (Array.isArray(rooms) && rooms.length === 0) return
+    ;(this.server.to(rooms).emit as (event: E, ...rest: Parameters<ServerToClientEvents[E]>) => boolean)(event, ...args)
+  }
+
   roll(roll: RollDto, userIds?: string[]): void {
     if (!this.server) return
     if (!userIds) {
