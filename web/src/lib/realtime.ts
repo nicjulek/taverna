@@ -36,6 +36,7 @@ export function useCampaignRoom(campaignId: string): { online: PresenceDto[]; co
     const onChanged = ({ campaignId: id, scope }: { campaignId: string; scope: ChangeScope }) => {
       if (id !== campaignId) return
       if (scope === 'journals') void queryClient.invalidateQueries({ queryKey: queryKeys.journals(campaignId) })
+      else if (scope === 'assets') void queryClient.invalidateQueries({ queryKey: queryKeys.assets(campaignId) })
       else if (scope === 'compendium') void queryClient.invalidateQueries({ queryKey: queryKeys.compendium(campaignId) })
       else if (scope === 'characters') void queryClient.invalidateQueries({ queryKey: queryKeys.characters(campaignId) })
       else void queryClient.invalidateQueries({ queryKey: queryKeys.campaign(campaignId) })

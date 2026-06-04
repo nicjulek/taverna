@@ -9,6 +9,10 @@ export const queryKeys = {
   compendium: (campaignId: string) => ['campaigns', campaignId, 'compendium'] as const,
   compendiumSearch: (campaignId: string, filters: object) => ['campaigns', campaignId, 'compendium', 'search', filters] as const,
   compendiumEntry: (campaignId: string, id: string) => ['campaigns', campaignId, 'compendium', id] as const,
+  scenes: (campaignId: string) => ['campaigns', campaignId, 'scenes'] as const,
+  scene: (campaignId: string, sceneId: string) => ['campaigns', campaignId, 'scenes', sceneId] as const,
+  activeScene: (campaignId: string) => ['campaigns', campaignId, 'scenes', 'active'] as const,
+  assets: (campaignId: string) => ['campaigns', campaignId, 'assets'] as const,
   rolls: (campaignId: string) => ['campaigns', campaignId, 'rolls'] as const,
   invite: (code: string) => ['invite', code] as const
 }

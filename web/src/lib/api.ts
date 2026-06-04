@@ -16,8 +16,8 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
     response = await fetch(`/api${path}`, {
       method,
       credentials: 'include',
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body)
+      headers: body === undefined || body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body)
     })
   } catch {
     throw new ApiError(0, 'Sem conexão com o servidor. Confira sua internet e tente de novo.')
@@ -36,5 +36,6 @@ export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
-  delete: (path: string) => request<void>('DELETE', path)
+  delete: (path: string) => request<void>('DELETE', path),
+  upload: <T>(path: string, form: FormData) => request<T>('POST', path, form)
 }
