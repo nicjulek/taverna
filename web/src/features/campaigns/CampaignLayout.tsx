@@ -1,5 +1,5 @@
 import { isGameMaster, ROLE_LABELS } from '@taverna/shared'
-import { BookMarked, BookOpen, Dices, ScrollText, Settings, Users } from 'lucide-react'
+import { BookMarked, BookOpen, Dices, Map as MapIcon, ScrollText, Settings, Users } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { CriticalFail } from '@/components/art/CriticalFail'
@@ -14,6 +14,7 @@ import type { CampaignContext } from './context'
 import { useCampaign } from './hooks'
 
 const TABS = [
+  { to: 'mesa', label: 'Mesa', icon: MapIcon },
   { to: 'diario', label: 'Diário', icon: BookOpen },
   { to: 'fichas', label: 'Fichas', icon: ScrollText },
   { to: 'dados', label: 'Dados', icon: Dices },
@@ -114,7 +115,12 @@ export function CampaignLayout() {
         </div>
       </section>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-10 sm:px-6">
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-1 flex-col px-4 pt-6 pb-10 sm:px-6',
+          pathname.endsWith('/mesa') ? 'max-w-[110rem]' : 'max-w-6xl'
+        )}
+      >
         <Outlet context={{ campaign, online } satisfies CampaignContext} />
       </div>
     </div>

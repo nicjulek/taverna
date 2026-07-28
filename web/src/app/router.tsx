@@ -10,6 +10,7 @@ import { JournalsPage } from '@/features/journals/JournalsPage'
 import { CharactersPage } from '@/features/characters/CharactersPage'
 import { CharacterPage } from '@/features/characters/sheet/CharacterPage'
 import { CompendiumPage } from '@/features/compendium/CompendiumPage'
+import { TablePage } from '@/features/table/TablePage'
 import { DicePage } from '@/features/dice/DicePage'
 import { MembersPage } from '@/features/members/MembersPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
                       { path: ':entryId', element: <CompendiumPage /> }
                     ]
                   },
+                  { path: 'mesa', element: <TablePage /> },
                   { path: 'dados', element: <DicePage /> },
                   { path: 'jogadores', element: <MembersPage /> },
                   { path: 'ajustes', element: <SettingsPage /> }

@@ -7,7 +7,7 @@ export const SCENE_LAYER_LABELS: Record<SceneLayer, string> = {
   map: 'Mapa',
   objects: 'Objetos e armadilhas',
   tokens: 'Tokens',
-  gm: 'Mestre'
+  gm: 'Mestre (oculta dos jogadores)'
 }
 
 export const SCENE_ITEM_KINDS = ['image', 'video', 'drawing', 'rect', 'ellipse', 'line', 'text', 'marker', 'token', 'template'] as const
