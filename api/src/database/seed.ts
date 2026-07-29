@@ -1,12 +1,13 @@
 import { roll } from '@taverna/dice'
 import { newSheet, type Sheet5e } from '@taverna/rules-5e'
 import bcrypt from 'bcryptjs'
-import type { RollVisibility } from '@taverna/shared'
+import { DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
 import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { newInviteCode } from '../modules/campaigns/campaigns.service'
 import * as schema from './schema'
+import { mineMapSvg, MINE_MAP } from './seed-map'
 
 export const DEMO_PASSWORD = 'taverna123'
 
@@ -126,9 +127,147 @@ async function seed(): Promise<void> {
       { id: 'martelo', name: 'Martelo de guerra', ability: 'str', proficient: true, bonus: 0, damage: '1d8', damageType: 'concussão' }
     ]
   }
-  await db.insert(schema.characters).values([
-    { campaignId: campaign!.id, ownerId: ana.id, name: 'Lia Pés-Leves', sheet: lia },
-    { campaignId: campaign!.id, ownerId: bruno.id, name: 'Doran Martelo-de-Brasa', sheet: doran }
+  const [liaRow, doranRow] = await db
+    .insert(schema.characters)
+    .values([
+      { campaignId: campaign!.id, ownerId: ana.id, name: 'Lia Pés-Leves', sheet: lia },
+      { campaignId: campaign!.id, ownerId: bruno.id, name: 'Doran Martelo-de-Brasa', sheet: doran }
+    ])
+    .returning()
+
+  const svg = Buffer.from(mineMapSvg())
+  const [map] = await db
+    .insert(schema.assets)
+    .values({ campaignId: campaign!.id, uploaderId: gm.id, name: 'Mina antiga.svg', mime: 'image/svg+xml', size: svg.length })
+    .returning()
+  await db.insert(schema.assetBlobs).values({ assetId: map!.id, data: svg })
+  const [mine, village] = await db
+    .insert(schema.scenes)
+    .values([
+      { campaignId: campaign!.id, name: 'Mina antiga', sortOrder: 0, active: true, settings: DEFAULT_SCENE_SETTINGS },
+      {
+        campaignId: campaign!.id,
+        name: 'Vau-do-Corvo',
+        sortOrder: 1,
+        settings: {
+          ...DEFAULT_SCENE_SETTINGS,
+          grid: { ...DEFAULT_SCENE_SETTINGS.grid, type: 'none' },
+          background: { color: '#cbb48a', texture: 'parchment' }
+        }
+      }
+    ])
+    .returning()
+  const cell = MINE_MAP.cell
+  const at = (col: number, row: number, span = 1) => ({ x: col * cell, y: row * cell, width: cell * span, height: cell * span })
+  await db.insert(schema.sceneItems).values([
+    {
+      sceneId: mine!.id,
+      layer: 'map',
+      kind: 'image',
+      x: 5 * cell,
+      y: 2 * cell,
+      width: MINE_MAP.cols * cell,
+      height: MINE_MAP.rows * cell,
+      locked: true,
+      z: 0,
+      createdBy: gm.id,
+      data: { assetId: map!.id, name: 'Mina antiga' }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'objects',
+      kind: 'template',
+      x: 22 * cell,
+      y: 5.5 * cell,
+      width: 1,
+      height: 1,
+      z: 1,
+      createdBy: gm.id,
+      data: { template: 'sphere', size: 6, angle: 0, color: '#9fd6c4' }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'objects',
+      kind: 'text',
+      x: 5.4 * cell,
+      y: 16.2 * cell,
+      width: 420,
+      height: 40,
+      z: 2,
+      createdBy: gm.id,
+      data: { text: 'Entrada da mina', fontSize: 30, color: '#ece4d4' }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'tokens',
+      kind: 'token',
+      ...at(6, 13),
+      z: 3,
+      ownerId: ana.id,
+      createdBy: gm.id,
+      data: { name: 'Lia Pés-Leves', color: ana.color, span: 1, characterId: liaRow!.id }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'tokens',
+      kind: 'token',
+      ...at(7, 14),
+      z: 4,
+      ownerId: bruno.id,
+      createdBy: gm.id,
+      data: { name: 'Doran Martelo-de-Brasa', color: bruno.color, span: 1, characterId: doranRow!.id }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'tokens',
+      kind: 'token',
+      ...at(15, 8),
+      z: 5,
+      createdBy: gm.id,
+      data: { name: 'Kobold', color: '#8a3b2a', span: 1 }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'tokens',
+      kind: 'token',
+      ...at(17, 9),
+      z: 6,
+      createdBy: gm.id,
+      data: { name: 'Kobold', color: '#8a3b2a', span: 1 }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'gm',
+      kind: 'token',
+      ...at(21, 4),
+      z: 7,
+      createdBy: gm.id,
+      data: { name: 'Chefe kobold', color: '#5c2116', span: 1 }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'gm',
+      kind: 'marker',
+      x: 11.1 * cell,
+      y: 6.1 * cell,
+      width: 56,
+      height: 56,
+      z: 8,
+      createdBy: gm.id,
+      data: { label: 'Armadilha', color: '#c5523f' }
+    },
+    {
+      sceneId: village!.id,
+      layer: 'objects',
+      kind: 'text',
+      x: 280,
+      y: 280,
+      width: 600,
+      height: 60,
+      z: 0,
+      createdBy: gm.id,
+      data: { text: 'Praça de Vau-do-Corvo', fontSize: 44, color: '#2b1d12' }
+    }
   ])
 
   await db.insert(schema.compendiumEntries).values([
