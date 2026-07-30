@@ -1,0 +1,72 @@
+import { expect, test } from '@playwright/test'
+import { newPlayer, signUp } from './helpers'
+
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAEUlEQVR4nGPQCLDBihgGUgIA4J0hwc2Dia0AAAAASUVORK5CYII=', 'base64')
+
+test('mestre monta a cena e o jogador só vê o que é dele', async ({ browser }) => {
+  const gm = await newPlayer(browser, 'Mestra', { width: 1440, height: 900 })
+  await gm.goto('/criar-conta')
+  await signUp(gm, 'Mestra')
+  await gm.getByRole('button', { name: 'Nova campanha' }).first().click()
+  await gm.getByLabel('Nome').fill('Torre Afundada')
+  await gm.getByRole('button', { name: 'Criar campanha' }).click()
+  await gm.getByRole('link', { name: 'Mesa' }).click()
+  await expect(gm.getByRole('heading', { name: 'Nenhuma cena ainda' })).toBeVisible()
+
+  await gm.getByRole('button', { name: 'Nova cena' }).click()
+  await gm.getByLabel('Nome da cena').fill('Porão alagado')
+  await gm.getByRole('button', { name: 'Criar cena' }).click()
+  await expect(gm.getByRole('heading', { name: 'Porão alagado' })).toBeVisible()
+  await expect(gm.getByText('Os jogadores veem esta')).toBeVisible()
+
+  await gm.getByRole('button', { name: 'Galeria de mapas' }).click()
+  await gm.locator('input[type="file"]').setInputFiles({ name: 'porao.png', mimeType: 'image/png', buffer: PNG })
+  await gm.getByRole('button', { name: /porao\.png/ }).click()
+  await expect(gm.getByText('Imagem', { exact: true })).toBeVisible()
+  await gm.getByLabel('Largura em quadrados').fill('12')
+  await gm.getByLabel('Altura em quadrados').fill('9')
+  await gm.getByRole('button', { name: 'Encaixar' }).click()
+  await expect(gm.getByLabel('Largura em quadrados')).toHaveValue('12')
+  await gm.getByRole('button', { name: 'Travar' }).click()
+  await expect(gm.getByRole('button', { name: 'Travado' })).toBeVisible()
+
+  await gm.getByRole('button', { name: 'Token', exact: true }).click()
+  const canvas = gm.locator('.konvajs-content')
+  await canvas.click({ position: { x: 300, y: 260 } })
+  await gm.getByLabel('Nome do token').fill('Afogado')
+  await gm.getByRole('button', { name: 'Colocar' }).click()
+  const tokens = gm.getByRole('region', { name: 'Tokens na cena' })
+  await expect(tokens.getByRole('button', { name: 'Afogado' })).toBeVisible()
+  await gm.getByRole('combobox', { name: 'Camada do item' }).click()
+  await gm.getByRole('option', { name: /^Mestre/ }).click()
+  await expect(tokens.getByText('(oculto)')).toBeVisible()
+
+  await gm.getByRole('link', { name: 'Jogadores' }).click()
+  const invite = await gm.locator('[title*="/convite/"]').getAttribute('title')
+  await gm.getByRole('link', { name: 'Mesa' }).click()
+
+  const player = await newPlayer(browser, 'Ladina', { width: 390, height: 844 })
+  await player.goto(invite!)
+  await signUp(player, 'Ladina')
+  await player.getByRole('button', { name: 'Entrar na campanha' }).click()
+  await player.getByRole('link', { name: 'Mesa' }).click()
+  await expect(player.getByRole('heading', { name: 'Porão alagado' })).toBeVisible()
+  const playerTokens = player.getByRole('region', { name: 'Tokens na cena' })
+  await expect(playerTokens.getByText('Nenhum token por aqui.')).toBeVisible()
+  await expect(player.getByRole('button', { name: 'Token', exact: true })).toHaveCount(0)
+
+  await gm
+    .getByRole('region', { name: 'Tokens na cena' })
+    .getByRole('button', { name: /Afogado/ })
+    .click()
+  await gm.getByRole('combobox', { name: 'Camada do item' }).click()
+  await gm.getByRole('option', { name: 'Tokens', exact: true }).click()
+  await expect(playerTokens.getByRole('button', { name: 'Afogado' })).toBeVisible()
+
+  await gm.getByRole('button', { name: 'Nova cena' }).click()
+  await gm.getByLabel('Nome da cena').fill('Telhado')
+  await gm.getByRole('button', { name: 'Criar cena' }).click()
+  await expect(gm.getByRole('heading', { name: 'Telhado' })).toBeVisible()
+  await gm.getByRole('button', { name: 'Mostrar aos jogadores' }).click()
+  await expect(player.getByRole('heading', { name: 'Telhado' })).toBeVisible()
+})
