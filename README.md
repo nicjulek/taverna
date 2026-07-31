@@ -14,6 +14,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Dados**: rolador com a notação completa (vantagem, manter e descartar, explosão, rerrolar e contas), montado pelos botões ou escrito à mão, com faixa e média antes de rolar. Quem rola escolhe se todos veem, só os mestres ou só ela. O servidor rola, para ninguém trapacear, e a mesa vê o resultado na hora.
 - **Fichas de D&D 5e**: atributos, salvaguardas e perícias com especialização e pau para toda obra, PV e PV temporário, testes contra a morte, dados de vida, descanso curto e longo, ataques com dano e crítico, magias com espaços por círculo, pacto e concentração, e contadores de classe (Ki, Fúria, Dados de Superioridade, Inspiração Bárdica, Pontos de Feitiçaria) ou livres. Tudo que tem número rola com um clique, com vantagem ou desvantagem, e a ficha se salva sozinha. O dono e os mestres editam; o resto do grupo vê, a não ser que o dono esconda.
 - **Compêndio**: as 1.155 entradas do SRD 5.1 (319 magias, 334 monstros, 476 itens, condições, raças, talento e antecedente), com busca e filtros por círculo, escola, classe, tipo de criatura, nível de desafio, categoria e raridade. Os monstros abrem numa ficha de pergaminho em que ataque, dano, PV e atributos rolam com um clique, e as rolagens do mestre ficam secretas. O mestre cria homebrew de magias, itens, monstros, condições e talentos, do zero ou copiando uma entrada do SRD, e publica quando quiser. Magias e armas vão para a ficha arrastando ou pelo botão de adicionar.
+- **Mesa virtual**: cenas com mapa, grade e tokens, e uma de cada vez aberta para os jogadores, trocada com um clique. O mestre arrasta o mapa do computador para a mesa ou escolhe na galeria (JPG, PNG, WebP, GIF, SVG, WebM e MP4, até 25 MB), coloca várias imagens na mesma cena ou começa do zero com cor ou textura de fundo. O mapa se ajusta pelos cantos (Shift mantém a proporção), gira, espelha, trava e encaixa num tamanho em quadrados, como 30 × 20, ou na grade desenhada na própria imagem. Grade quadrada, hexagonal ou nenhuma, com escala por quadrado em metros ou pés. Pincel, retângulo, elipse, linha, texto e marcadores, régua que conta quadrados e distância, e moldes de área de cone, esfera, linha, cilindro e cubo. Quatro camadas (mapa, objetos, tokens e a do mestre, que os jogadores não recebem) e tudo aparece para o grupo na hora.
 - **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
@@ -31,6 +32,8 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 
 ![Ficha](docs/ficha.webp)
 
+![Mesa virtual](docs/mesa.webp)
+
 ![Compêndio](docs/compendio.webp)
 
 ![Dados](docs/dados.webp)
@@ -40,6 +43,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
   <img src="docs/celular.webp" alt="Campanha no celular" width="240" />
   <img src="docs/celular-dados.webp" alt="Rolagens no celular" width="240" />
   <img src="docs/celular-ficha.webp" alt="Ficha no celular" width="240" />
+  <img src="docs/celular-mesa.webp" alt="Mesa no celular" width="240" />
 </p>
 
 ## Design e acessibilidade
@@ -68,6 +72,7 @@ taverna/
 │   ├── dice/            parser e rolador da notação de dados, com mínimo, máximo e média
 │   ├── rules-core/      interface do motor de regras, que não conhece nenhum sistema
 │   ├── rules-5e/        regras do D&D 5e
+│   ├── tabletop/        geometria da mesa: grade quadrada e hexagonal, régua, moldes de área e encaixe de mapas
 │   └── shared/          schemas, tipos, papéis, permissões e eventos do tempo real
 ├── api/                 NestJS
 │   ├── drizzle/         migrations SQL
@@ -83,6 +88,8 @@ taverna/
 │   │       ├── characters/  fichas com permissão e versão
 │   │       ├── compendium/  busca no SRD e homebrew da campanha
 │   │       ├── rolls/       rolagens feitas no servidor
+│   │       ├── assets/      mapas e vídeos enviados, guardados no banco
+│   │       ├── scenes/      cenas, camadas e itens da mesa
 │   │       └── health/
 │   └── test/            testes de integração com PostgreSQL
 └── web/                 React
@@ -114,6 +121,14 @@ O tempo real usa uma sala do Socket.IO por campanha. A conexão se autentica pel
 A ficha se salva sozinha um instante depois de cada mudança. Cada gravação leva o número da versão que a tela tinha; se o mestre e a jogadora editarem ao mesmo tempo, a segunda gravação volta com 409 e a tela carrega a versão nova em vez de apagar o que a outra pessoa fez.
 
 O `packages/dice` não sabe nada de D&D. As regras ficam no `packages/rules-5e`, que se registra no `rules-core` pelo id `dnd5e`. Por isso outro sistema entra como um pacote novo, sem mexer no rolador nem nas telas.
+
+## Mesa virtual
+
+A mesa desenha com [Konva](https://konvajs.org). Cada item da cena (imagem, vídeo, desenho, forma, texto, marcador, token ou molde) é uma linha com posição, tamanho, giro, espelho, trava, ordem e camada, e os dados de cada tipo vão num campo JSON. As contas de grade, régua e moldes ficam em `packages/tabletop`, sem dependência de tela, e têm testes próprios. A régua segue a regra do 5e, em que a diagonal vale um quadrado, e a cena pode trocar para a regra alternada (5-10-5).
+
+Os jogadores só recebem a cena aberta, e nunca os itens da camada do mestre: a API filtra antes de responder e o tempo real manda esses itens só para os mestres. Jogadores podem desenhar, escrever, marcar e medir nas camadas de objetos e tokens, e mexer no que eles mesmos colocaram ou no token que é deles.
+
+Os arquivos enviados ficam no PostgreSQL, então não é preciso configurar armazenamento à parte. O tipo do arquivo é conferido pelos primeiros bytes, não pela extensão, e SVG é servido com uma política de segurança que bloqueia scripts.
 
 ## Compêndio e SRD 5.1
 
@@ -182,15 +197,27 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | GET, POST          | `/campaigns/:id/compendium`                     | Buscar e criar homebrew          |
 | GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`            | Ler, editar e apagar homebrew    |
 | GET, POST          | `/campaigns/:id/rolls`                          | Rolagens visíveis e rolar        |
+| GET, POST          | `/campaigns/:id/assets`                         | Galeria e envio de arquivo       |
+| DELETE             | `/campaigns/:id/assets/:assetId`                | Apagar da galeria                |
+| GET                | `/assets/:assetId`                              | Baixar o arquivo                 |
+| GET, POST          | `/campaigns/:id/scenes`                         | Cenas e criar                    |
+| GET                | `/campaigns/:id/scenes/active`                  | Cena aberta para os jogadores    |
+| GET, PATCH, DELETE | `/campaigns/:id/scenes/:sceneId`                | Ler, configurar e apagar         |
+| POST               | `/campaigns/:id/scenes/:sceneId/activate`       | Mostrar aos jogadores            |
+| POST               | `/campaigns/:id/scenes/:sceneId/duplicate`      | Duplicar                         |
+| POST               | `/campaigns/:id/scenes/:sceneId/items`          | Colocar item                     |
+| PATCH, DELETE      | `/campaigns/:id/scenes/:sceneId/items/:itemId`  | Mover, ajustar e apagar item     |
 | GET                | `/health`                                       | Saúde da API e do banco          |
 
-| Evento (Socket.IO)                | Direção            | O que faz                                      |
-| --------------------------------- | ------------------ | ---------------------------------------------- |
-| `campaign:join`, `campaign:leave` | cliente → servidor | Entrar e sair da sala da campanha              |
-| `presence:list`                   | servidor → cliente | Quem está na mesa agora                        |
-| `campaign:changed`                | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
-| `campaign:removed`                | servidor → cliente | Você saiu ou foi removido                      |
-| `roll:new`                        | servidor → cliente | Rolagem nova, só para quem pode ver            |
+| Evento (Socket.IO)                 | Direção            | O que faz                                      |
+| ---------------------------------- | ------------------ | ---------------------------------------------- |
+| `campaign:join`, `campaign:leave`  | cliente → servidor | Entrar e sair da sala da campanha              |
+| `presence:list`                    | servidor → cliente | Quem está na mesa agora                        |
+| `campaign:changed`                 | servidor → cliente | Algo mudou (participantes, diário ou campanha) |
+| `campaign:removed`                 | servidor → cliente | Você saiu ou foi removido                      |
+| `roll:new`                         | servidor → cliente | Rolagem nova, só para quem pode ver            |
+| `scene:list`, `scene:active`       | servidor → cliente | Cenas mudaram ou outra foi aberta              |
+| `scene:item`, `scene:item:removed` | servidor → cliente | Item colocado, mexido ou apagado               |
 
 ## Deploy
 
