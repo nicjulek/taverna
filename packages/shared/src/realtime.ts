@@ -18,6 +18,7 @@ export interface ServerToClientEvents {
   'scene:active': (payload: { campaignId: string; sceneId: string | null }) => void
   'scene:item': (payload: { campaignId: string; sceneId: string; item: SceneItemDto }) => void
   'scene:item:removed': (payload: { campaignId: string; sceneId: string; id: string }) => void
+  'scene:explored': (payload: { campaignId: string; sceneId: string; explored: string | null }) => void
 }
 
 export interface ClientToServerEvents {
