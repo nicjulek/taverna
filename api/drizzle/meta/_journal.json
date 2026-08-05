@@ -57,6 +57,13 @@
       "when": 1794781343853,
       "tag": "0007_itens_adiados",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794833989875,
+      "tag": "0008_luz_e_nevoa",
+      "breakpoints": true
     }
   ]
 }

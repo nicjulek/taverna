@@ -173,6 +173,7 @@ export const scenes = pgTable(
     sortOrder: integer('sort_order').notNull().default(0),
     active: boolean('active').notNull().default(false),
     settings: jsonb('settings').$type<SceneSettings>().notNull(),
+    explored: text('explored'),
     createdAt: createdAt(),
     updatedAt: updatedAt()
   },
