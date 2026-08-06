@@ -1,10 +1,11 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import {
   type CreateSceneInput,
   DEFAULT_SCENE_SETTINGS,
   isGameMaster,
   PLAYER_ITEM_KINDS,
   type Role,
+  sceneSettings,
   type SceneDto,
   type SceneItemDto,
   type SceneItemValues,
@@ -12,6 +13,7 @@ import {
   type UpdateSceneInput,
   type UpdateSceneItemInput
 } from '@taverna/shared'
+import { decodeBits, doorState, encodeBits, exploredDims, pathBlocked, setBits, wallSegments, wallType } from '@taverna/tabletop'
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
 import { campaignMembers, sceneItems, scenes } from '../../database/schema'
@@ -58,7 +60,13 @@ export class ScenesService {
       .where(eq(scenes.campaignId, campaignId))) as [{ count: number; max: number }]
     const [row] = await this.db
       .insert(scenes)
-      .values({ campaignId, name: input.name, settings: input.settings ?? DEFAULT_SCENE_SETTINGS, sortOrder: max + 1, active: count === 0 })
+      .values({
+        campaignId,
+        name: input.name,
+        settings: input.settings ? sceneSettings(input.settings) : DEFAULT_SCENE_SETTINGS,
+        sortOrder: max + 1,
+        active: count === 0
+      })
       .returning()
     this.realtime.emit({ campaignId }, 'scene:list', { campaignId })
     if (row!.active) this.realtime.emit({ campaignId }, 'scene:active', { campaignId, sceneId: row!.id })
@@ -67,9 +75,16 @@ export class ScenesService {
 
   async update(campaignId: string, sceneId: string, userId: string, input: UpdateSceneInput): Promise<SceneDto> {
     const role = await this.requireGameMaster(campaignId, userId)
-    await this.find(campaignId, sceneId, role)
-    const [row] = await this.db.update(scenes).set(input).where(eq(scenes.id, sceneId)).returning()
+    const current = await this.find(campaignId, sceneId, role)
+    const before = sceneSettings(current.settings)
+    const resized = input.settings && (input.settings.width !== before.width || input.settings.height !== before.height)
+    const [row] = await this.db
+      .update(scenes)
+      .set(resized ? { ...input, explored: null } : input)
+      .where(eq(scenes.id, sceneId))
+      .returning()
     this.realtime.emit({ campaignId }, 'scene:list', { campaignId })
+    if (resized) this.realtime.emit({ campaignId }, 'scene:explored', { campaignId, sceneId, explored: null })
     return this.toScene(row!)
   }
 
@@ -153,10 +168,62 @@ export class ScenesService {
       if (item.locked) throw new ForbiddenException('Esse item está travado pelo mestre')
       if (input.layer === 'gm' || input.layer === 'map' || input.locked !== undefined || input.ownerId !== undefined)
         throw new ForbiddenException('Só os mestres mudam camada, trava e dono')
+      if (item.kind === 'token' && (input.x !== undefined || input.y !== undefined)) await this.checkPath(sceneId, item, input)
     }
     const [row] = await this.db.update(sceneItems).set(input).where(eq(sceneItems.id, itemId)).returning()
     await this.publish(campaignId, scene, row!, item.layer)
     return this.toItem(row!)
+  }
+
+  async door(campaignId: string, sceneId: string, itemId: string, userId: string, state: 'open' | 'closed'): Promise<SceneItemDto> {
+    const role = await this.access.requireMember(campaignId, userId)
+    const scene = await this.find(campaignId, sceneId, role)
+    const item = await this.findItem(sceneId, itemId, role)
+    if (item.kind !== 'wall' || wallType(item) !== 'door') throw new BadRequestException('Isso não é uma porta')
+    if (!isGameMaster(role) && doorState(item) === 'locked') throw new ForbiddenException('A porta está trancada')
+    const [row] = await this.db
+      .update(sceneItems)
+      .set({ data: { ...item.data, state } })
+      .where(eq(sceneItems.id, itemId))
+      .returning()
+    await this.publish(campaignId, scene, row!)
+    return this.toItem(row!)
+  }
+
+  async explore(campaignId: string, sceneId: string, userId: string, cells: number[]): Promise<{ explored: string | null }> {
+    const role = await this.access.requireMember(campaignId, userId)
+    await this.find(campaignId, sceneId, role)
+    const result = await this.db.transaction(async (tx) => {
+      const [row] = await tx.select().from(scenes).where(eq(scenes.id, sceneId)).for('update')
+      const settings = sceneSettings(row!.settings)
+      const { cols, rows } = exploredDims(settings.width, settings.height)
+      const bits = decodeBits(row!.explored, cols * rows)
+      if (setBits(bits, cells) === 0) return { explored: row!.explored, changed: false }
+      const explored = encodeBits(bits)
+      await tx.update(scenes).set({ explored }).where(eq(scenes.id, sceneId))
+      return { explored, changed: true }
+    })
+    if (result.changed) this.realtime.emit({ campaignId }, 'scene:explored', { campaignId, sceneId, explored: result.explored })
+    return { explored: result.explored }
+  }
+
+  async resetExplored(campaignId: string, sceneId: string, userId: string): Promise<void> {
+    const role = await this.requireGameMaster(campaignId, userId)
+    await this.find(campaignId, sceneId, role)
+    await this.db.update(scenes).set({ explored: null }).where(eq(scenes.id, sceneId))
+    this.realtime.emit({ campaignId }, 'scene:explored', { campaignId, sceneId, explored: null })
+  }
+
+  private async checkPath(sceneId: string, item: ItemRow, input: UpdateSceneItemInput): Promise<void> {
+    const walls = await this.db
+      .select()
+      .from(sceneItems)
+      .where(and(eq(sceneItems.sceneId, sceneId), eq(sceneItems.kind, 'wall')))
+    if (walls.length === 0) return
+    const center = (x: number, y: number) => ({ x: x + item.width / 2, y: y + item.height / 2 })
+    const from = center(item.x, item.y)
+    const to = center(input.x ?? item.x, input.y ?? item.y)
+    if (pathBlocked(from, to, wallSegments(walls, 'move'))) throw new BadRequestException('Uma parede bloqueia o caminho')
   }
 
   async removeItem(campaignId: string, sceneId: string, itemId: string, userId: string): Promise<void> {
@@ -228,7 +295,8 @@ export class ScenesService {
       name: row.name,
       sortOrder: row.sortOrder,
       active: row.active,
-      settings: row.settings,
+      settings: sceneSettings(row.settings),
+      explored: row.explored,
       updatedAt: row.updatedAt.toISOString()
     }
   }
