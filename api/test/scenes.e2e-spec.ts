@@ -187,4 +187,94 @@ describe('mesa', () => {
       expect((await player.agent().get(`${base}/scenes/active`).expect(200)).body).toEqual({})
     })
   })
+
+  describe('luz e névoa', () => {
+    let scene: SceneDto
+    let door: SceneItemDto
+    let token: SceneItemDto
+    const path = () => `${base}/scenes/${scene.id}`
+
+    it('cena nova vem com a névoa desligada e só o mestre põe paredes e luzes', async () => {
+      scene = (await gm.agent().post(`${base}/scenes`).send({ name: 'Porão' }).expect(201)).body as SceneDto
+      await gm.agent().post(`${path()}/activate`).expect(200)
+      expect(scene.settings.lighting).toEqual({ vision: false, ambient: 'dark', explore: true })
+      expect(scene.explored).toBeNull()
+      const wall = { layer: 'objects', kind: 'wall', x: 350, y: 0, width: 1, height: 700, data: { type: 'wall', points: [0, 0, 0, 700] } }
+      await player.agent().post(`${path()}/items`).send(wall).expect(403)
+      await player.agent().post(`${path()}/items`).send({ layer: 'objects', kind: 'light', x: 0, y: 0, width: 40, height: 40 }).expect(403)
+      await gm.agent().post(`${path()}/items`).send(wall).expect(201)
+      door = (
+        await gm
+          .agent()
+          .post(`${path()}/items`)
+          .send({
+            layer: 'objects',
+            kind: 'wall',
+            x: 0,
+            y: 350,
+            width: 350,
+            height: 1,
+            data: { type: 'door', state: 'closed', points: [0, 0, 350, 0] }
+          })
+          .expect(201)
+      ).body as SceneItemDto
+    })
+
+    it('parede e porta fechada barram o token do jogador, mas não o mestre', async () => {
+      token = (
+        await player
+          .agent()
+          .post(`${path()}/items`)
+          .send({ layer: 'tokens', kind: 'token', x: 140, y: 140, width: 70, height: 70, data: { name: 'Ladina' } })
+          .expect(201)
+      ).body as SceneItemDto
+      const blocked = await player.agent().patch(`${path()}/items/${token.id}`).send({ x: 490 }).expect(400)
+      expect(blocked.body.message).toBe('Uma parede bloqueia o caminho')
+      await player.agent().patch(`${path()}/items/${token.id}`).send({ y: 420 }).expect(400)
+      await player.agent().patch(`${path()}/items/${token.id}`).send({ x: 210 }).expect(200)
+      await gm.agent().patch(`${path()}/items/${token.id}`).send({ x: 490 }).expect(200)
+      await gm.agent().patch(`${path()}/items/${token.id}`).send({ x: 210 }).expect(200)
+    })
+
+    it('jogador abre a porta destrancada e o mestre tranca', async () => {
+      const opened = (await player.agent().post(`${path()}/items/${door.id}/door`).send({ state: 'open' }).expect(200)).body as SceneItemDto
+      expect(opened.data.state).toBe('open')
+      await player.agent().patch(`${path()}/items/${token.id}`).send({ y: 420 }).expect(200)
+      await gm
+        .agent()
+        .patch(`${path()}/items/${door.id}`)
+        .send({ data: { ...door.data, state: 'locked' } })
+        .expect(200)
+      await player.agent().post(`${path()}/items/${door.id}/door`).send({ state: 'open' }).expect(403)
+      await player.agent().post(`${path()}/items/${token.id}/door`).send({ state: 'open' }).expect(400)
+    })
+
+    it('áreas vistas se somam, avisam a mesa e só o mestre apaga', async () => {
+      const gmSocket = await connect(gm)
+      const events: (string | null)[] = []
+      gmSocket.on('scene:explored', ({ explored }) => events.push(explored))
+      const first = (
+        await player
+          .agent()
+          .post(`${path()}/explored`)
+          .send({ cells: [0, 1, 61] })
+          .expect(200)
+      ).body
+      expect(first.explored).toMatch(/^[A-Za-z0-9+/=]+$/)
+      const again = (
+        await player
+          .agent()
+          .post(`${path()}/explored`)
+          .send({ cells: [1] })
+          .expect(200)
+      ).body
+      expect(again.explored).toBe(first.explored)
+      await player.agent().delete(`${path()}/explored`).expect(403)
+      await gm.agent().delete(`${path()}/explored`).expect(204)
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      expect(events).toEqual([first.explored, null])
+      const fresh = (await gm.agent().get(path()).expect(200)).body as SceneWithItemsDto
+      expect(fresh.explored).toBeNull()
+    })
+  })
 })
