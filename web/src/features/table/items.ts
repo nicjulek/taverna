@@ -1,9 +1,22 @@
-import type { Grid, Point, TemplateKind } from '@taverna/tabletop'
+import type { Grid, Point, TemplateKind, WallType } from '@taverna/tabletop'
 import { normalizeRect, snap } from '@taverna/tabletop'
-import type { SceneItemDto, SceneItemInput, SceneLayer } from '@taverna/shared'
+import { LIGHT_PRESETS, type LightPreset, type SceneItemDto, type SceneItemInput, type SceneLayer } from '@taverna/shared'
 
 export type Tool =
-  'select' | 'pan' | 'brush' | 'rect' | 'ellipse' | 'line' | 'text' | 'marker' | 'ruler' | 'template' | 'token' | 'calibrate'
+  | 'select'
+  | 'pan'
+  | 'brush'
+  | 'rect'
+  | 'ellipse'
+  | 'line'
+  | 'text'
+  | 'marker'
+  | 'ruler'
+  | 'template'
+  | 'token'
+  | 'wall'
+  | 'light'
+  | 'calibrate'
 
 export const TOOL_LABELS: Record<Tool, string> = {
   select: 'Selecionar e mover',
@@ -17,6 +30,8 @@ export const TOOL_LABELS: Record<Tool, string> = {
   ruler: 'Régua',
   template: 'Molde de área',
   token: 'Token',
+  wall: 'Paredes, portas e janelas',
+  light: 'Luz',
   calibrate: 'Calibrar pela grade do mapa'
 }
 
@@ -112,4 +127,39 @@ export function initials(name: string): string {
 
 export function canEdit(item: SceneItemDto, gm: boolean, me: string): boolean {
   return gm || (!item.locked && (item.createdBy === me || item.ownerId === me))
+}
+
+export function wallItem(points: Point[], type: WallType): SceneItemInput | null {
+  const clean = points.filter((p, i) => i === 0 || p.x !== points[i - 1]!.x || p.y !== points[i - 1]!.y)
+  if (clean.length < 2) return null
+  const xs = clean.map((p) => p.x)
+  const ys = clean.map((p) => p.y)
+  const minX = Math.min(...xs)
+  const minY = Math.min(...ys)
+  return {
+    layer: 'objects',
+    kind: 'wall',
+    x: minX,
+    y: minY,
+    width: Math.max(1, Math.max(...xs) - minX),
+    height: Math.max(1, Math.max(...ys) - minY),
+    data: {
+      type,
+      ...(type === 'door' ? { state: 'closed' } : {}),
+      points: clean.flatMap((p) => [Math.round((p.x - minX) * 10) / 10, Math.round((p.y - minY) * 10) / 10])
+    }
+  }
+}
+
+export function lightItem(at: Point, preset: LightPreset): SceneItemInput {
+  const { bright, dim } = LIGHT_PRESETS[preset]
+  return {
+    layer: 'objects',
+    kind: 'light',
+    x: at.x - 20,
+    y: at.y - 20,
+    width: 40,
+    height: 40,
+    data: { preset, bright, dim, color: '#ffd27a' }
+  }
 }

@@ -62,6 +62,11 @@ export function removeItem(scene: SceneCache, sceneId: string, id: string): Scen
   return { ...scene, items: scene.items.filter((i) => i.id !== id) }
 }
 
+export function setExplored(scene: SceneCache, sceneId: string, explored: string | null): SceneCache {
+  if (!scene || scene.id !== sceneId || scene.explored === explored) return scene
+  return { ...scene, explored }
+}
+
 export function useSceneMutations(campaignId: string) {
   const queryClient = useQueryClient()
   const refreshList = () => void queryClient.invalidateQueries({ queryKey: queryKeys.scenes(campaignId) })
@@ -78,8 +83,10 @@ export function useSceneMutations(campaignId: string) {
   const update = useMutation({
     mutationFn: ({ id, ...input }: UpdateSceneInput & { id: string }) =>
       api.patch<SceneDto>(`/campaigns/${campaignId}/scenes/${id}`, input),
-    onMutate: ({ id, ...input }) =>
-      patchCaches((scene) => (scene && scene.id === id ? { ...scene, ...input, settings: input.settings ?? scene.settings } : scene)),
+    onMutate: async ({ id, ...input }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.scenes(campaignId) })
+      patchCaches((scene) => (scene && scene.id === id ? { ...scene, ...input, settings: input.settings ?? scene.settings } : scene))
+    },
     onSettled: refreshList
   })
   const activate = useMutation({
@@ -116,7 +123,40 @@ export function useSceneMutations(campaignId: string) {
     onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.scenes(campaignId) })
   })
 
-  return { create, update, activate, duplicate, remove, createItem, updateItem, removeItem: removeItemMutation }
+  const door = useMutation({
+    mutationFn: ({ sceneId, id, state }: { sceneId: string; id: string; state: 'open' | 'closed' }) =>
+      api.post<SceneItemDto>(`/campaigns/${campaignId}/scenes/${sceneId}/items/${id}/door`, { state }),
+    onMutate: ({ sceneId, id, state }) =>
+      patchCaches((scene) => {
+        const current = scene?.items.find((i) => i.id === id)
+        return current && scene?.id === sceneId ? upsertItem(scene, { ...current, data: { ...current.data, state } }) : scene
+      }),
+    onSuccess: (item) => patchCaches((scene) => upsertItem(scene, item)),
+    onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.scenes(campaignId) })
+  })
+  const explore = useMutation({
+    mutationFn: ({ sceneId, cells }: { sceneId: string; cells: number[] }) =>
+      api.post<{ explored: string | null }>(`/campaigns/${campaignId}/scenes/${sceneId}/explored`, { cells }),
+    onSuccess: ({ explored }, { sceneId }) => patchCaches((scene) => setExplored(scene, sceneId, explored))
+  })
+  const resetExplored = useMutation({
+    mutationFn: (sceneId: string) => api.delete(`/campaigns/${campaignId}/scenes/${sceneId}/explored`),
+    onSuccess: (_, sceneId) => patchCaches((scene) => setExplored(scene, sceneId, null))
+  })
+
+  return {
+    create,
+    update,
+    activate,
+    duplicate,
+    remove,
+    createItem,
+    updateItem,
+    removeItem: removeItemMutation,
+    door,
+    explore,
+    resetExplored
+  }
 }
 
 export function useSceneFeed(campaignId: string) {
@@ -133,11 +173,15 @@ export function useSceneFeed(campaignId: string) {
       id === campaignId && patch((scene) => removeItem(scene, sceneId, itemId))
     const onList = ({ campaignId: id }: { campaignId: string }) =>
       id === campaignId && void queryClient.invalidateQueries({ queryKey: queryKeys.scenes(campaignId) })
+    const onExplored = ({ campaignId: id, sceneId, explored }: { campaignId: string; sceneId: string; explored: string | null }) =>
+      id === campaignId && patch((scene) => setExplored(scene, sceneId, explored))
+    socket.on('scene:explored', onExplored)
     socket.on('scene:item', onItem)
     socket.on('scene:item:removed', onRemoved)
     socket.on('scene:list', onList)
     socket.on('scene:active', onList)
     return () => {
+      socket.off('scene:explored', onExplored)
       socket.off('scene:item', onItem)
       socket.off('scene:item:removed', onRemoved)
       socket.off('scene:list', onList)

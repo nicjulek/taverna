@@ -1,6 +1,6 @@
 import type { Grid } from '@taverna/tabletop'
 import { describe, expect, it } from 'vitest'
-import { drawingItem, initials, mediaItem, shapeItem, templateItem, tokenItem } from './items'
+import { drawingItem, initials, mediaItem, shapeItem, templateItem, tokenItem, lightItem, wallItem } from './items'
 
 const style = { stroke: '#ff0000', fill: '#00000000', strokeWidth: 4 }
 const grid: Grid = { type: 'square', size: 70, offsetX: 0, offsetY: 0 }
@@ -70,5 +70,41 @@ describe('itens da mesa', () => {
   it('iniciais do token', () => {
     expect(initials('Doran Martelo-de-Brasa')).toBe('DM')
     expect(initials('pip')).toBe('P')
+  })
+})
+
+describe('paredes e luzes', () => {
+  it('guarda a parede com pontos relativos', () => {
+    const wall = wallItem(
+      [
+        { x: 140, y: 70 },
+        { x: 140, y: 70 },
+        { x: 280, y: 70 },
+        { x: 280, y: 210 }
+      ],
+      'wall'
+    )!
+    expect(wall).toMatchObject({
+      kind: 'wall',
+      x: 140,
+      y: 70,
+      width: 140,
+      height: 140,
+      data: { type: 'wall', points: [0, 0, 140, 0, 140, 140] }
+    })
+    expect(wallItem([{ x: 1, y: 1 }], 'door')).toBeNull()
+    expect(
+      wallItem(
+        [
+          { x: 0, y: 0 },
+          { x: 0, y: 70 }
+        ],
+        'door'
+      )!.data
+    ).toMatchObject({ state: 'closed' })
+  })
+
+  it('luz centralizada com o raio do tipo escolhido', () => {
+    expect(lightItem({ x: 100, y: 100 }, 'torch')).toMatchObject({ kind: 'light', x: 80, y: 80, data: { bright: 4, dim: 8 } })
   })
 })
