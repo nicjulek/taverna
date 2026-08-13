@@ -1,6 +1,8 @@
-import type { SceneItemDto, SceneItemInput, SceneLayer, SceneWithItemsDto } from '@taverna/shared'
+import type { LightPreset, SceneItemDto, SceneItemInput, SceneLayer, SceneWithItemsDto } from '@taverna/shared'
 import {
+  doorState,
   type Grid,
+  hasBit,
   hexCorners,
   hexToPixel,
   measure,
@@ -8,14 +10,19 @@ import {
   type Point,
   type Rect as Box,
   snap,
+  pathBlocked,
   type TemplateKind,
-  templateShape
+  templateShape,
+  wallPoints,
+  type WallType,
+  wallType
 } from '@taverna/tabletop'
 import type Konva from 'konva'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Circle, Ellipse, Group, Image as KonvaImage, Label, Layer, Line, Rect, Shape, Stage, Tag, Text, Transformer } from 'react-konva'
-import { canEdit, type DrawStyle, drawingItem, initials, shapeItem, templateItem, type Tool } from './items'
+import { canEdit, type DrawStyle, drawingItem, initials, lightItem, shapeItem, templateItem, type Tool, wallItem } from './items'
 import { texture } from './textures'
+import type { VisionState } from './vision'
 
 export interface View {
   x: number
@@ -42,7 +49,14 @@ interface CanvasProps {
   onCalibrate: (cell: Box) => void
   onPlace: (tool: 'text' | 'token' | 'marker', point: Point) => void
   onDropFiles: (files: File[], point: Point) => void
+  vision: VisionState | null
+  wallType: WallType
+  lightPreset: LightPreset
+  onDoor: (id: string, state: 'open' | 'closed') => void
+  onBlocked: () => void
 }
+
+const WALL_COLORS: Record<WallType, string> = { wall: '#e8bb5f', door: '#c58b3a', window: '#6fa8dc' }
 
 const LAYER_ORDER: SceneLayer[] = ['map', 'objects', 'tokens', 'gm']
 
@@ -228,7 +242,171 @@ function ItemBody({ item, grid, scene }: { item: SceneItemDto; grid: Grid; scene
       return <TokenNode item={item} />
     case 'template':
       return <TemplateNode item={item} grid={grid} scale={scene.settings.scale} />
+    case 'wall': {
+      const type = wallType(item)
+      const points = wallPoints({ ...item, x: 0, y: 0 }).flatMap((p) => [p.x, p.y])
+      const open = type === 'door' && doorState(item) === 'open'
+      return (
+        <Line
+          points={points}
+          stroke={WALL_COLORS[type]}
+          strokeWidth={type === 'door' ? 8 : 5}
+          dash={type === 'window' ? [14, 8] : open ? [4, 10] : undefined}
+          lineCap="round"
+          lineJoin="round"
+          hitStrokeWidth={18}
+          shadowColor="#000"
+          shadowBlur={4}
+        />
+      )
+    }
+    case 'light': {
+      const r = item.width / 2
+      return (
+        <>
+          <Circle x={r} y={r} radius={r} fill="#101a16" opacity={0.75} />
+          <Circle x={r} y={r} radius={r * 0.45} fill={String(item.data.color ?? '#ffd27a')} shadowColor="#ffd27a" shadowBlur={12} />
+          {Array.from({ length: 8 }, (_, i) => {
+            const a = (i * Math.PI) / 4
+            return (
+              <Line
+                key={i}
+                points={[r + Math.cos(a) * r * 0.6, r + Math.sin(a) * r * 0.6, r + Math.cos(a) * r * 0.9, r + Math.sin(a) * r * 0.9]}
+                stroke="#ffd27a"
+                strokeWidth={2.5}
+                lineCap="round"
+              />
+            )
+          })}
+        </>
+      )
+    }
   }
+}
+
+type Raw = { _context: CanvasRenderingContext2D }
+
+function FogShape({ vision, preview }: { vision: VisionState; preview: boolean }) {
+  return (
+    <Shape
+      listening={false}
+      perfectDrawEnabled={false}
+      opacity={preview ? 0.82 : 1}
+      sceneFunc={(context) => {
+        const ctx = (context as unknown as Raw)._context
+        const { bounds, cell, viewers, lights, ambient, explored } = vision
+        const pad = Math.max(bounds.width, bounds.height) * 4
+        const fill = (alpha: number) => {
+          ctx.fillStyle = `rgba(0,0,0,${alpha})`
+          ctx.fill()
+        }
+        const polygon = (points: Point[]) => {
+          ctx.beginPath()
+          points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+          ctx.closePath()
+        }
+        ctx.save()
+        ctx.fillStyle = '#05080a'
+        ctx.fillRect(bounds.x - pad, bounds.y - pad, bounds.width + pad * 2, bounds.height + pad * 2)
+        ctx.globalCompositeOperation = 'destination-out'
+        if (explored) {
+          const step = cell / 2
+          ctx.fillStyle = 'rgba(0,0,0,0.42)'
+          for (let r = 0; r < explored.rows; r++) {
+            let start = -1
+            for (let c = 0; c <= explored.cols; c++) {
+              const on = c < explored.cols && hasBit(explored.bits, r * explored.cols + c)
+              if (on && start < 0) start = c
+              if (!on && start >= 0) {
+                ctx.fillRect(start * step, r * step, (c - start) * step, step)
+                start = -1
+              }
+            }
+          }
+        }
+        for (const viewer of viewers) {
+          ctx.save()
+          polygon(viewer.polygon)
+          ctx.clip()
+          if (ambient === 'bright') {
+            ctx.fillStyle = '#000'
+            ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height)
+          } else {
+            if (ambient === 'dim') {
+              ctx.fillStyle = 'rgba(0,0,0,0.62)'
+              ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height)
+            }
+            for (const light of lights) {
+              const outer = Math.max(light.bright, light.dim)
+              if (outer <= 0) continue
+              ctx.save()
+              polygon(light.polygon)
+              ctx.clip()
+              const gradient = ctx.createRadialGradient(light.center.x, light.center.y, 0, light.center.x, light.center.y, outer)
+              const edge = Math.min(0.999, light.bright / outer)
+              gradient.addColorStop(0, 'rgba(0,0,0,1)')
+              gradient.addColorStop(edge, 'rgba(0,0,0,1)')
+              gradient.addColorStop(Math.min(1, edge + 0.001), 'rgba(0,0,0,0.62)')
+              gradient.addColorStop(1, 'rgba(0,0,0,0.55)')
+              ctx.fillStyle = gradient
+              ctx.beginPath()
+              ctx.arc(light.center.x, light.center.y, outer, 0, Math.PI * 2)
+              ctx.fill()
+              ctx.restore()
+            }
+            if (viewer.darkvision > 0) {
+              ctx.beginPath()
+              ctx.arc(viewer.center.x, viewer.center.y, viewer.darkvision, 0, Math.PI * 2)
+              fill(0.6)
+            }
+          }
+          ctx.restore()
+        }
+        ctx.restore()
+      }}
+    />
+  )
+}
+
+function DoorHandle({ item, onToggle }: { item: SceneItemDto; onToggle: () => void }) {
+  const points = wallPoints(item)
+  if (points.length < 2) return null
+  const a = points[0]!
+  const b = points[points.length - 1]!
+  const state = doorState(item)
+  const color = state === 'open' ? '#7fb487' : state === 'locked' ? '#c5523f' : '#c58b3a'
+  return (
+    <Group
+      x={(a.x + b.x) / 2}
+      y={(a.y + b.y) / 2}
+      onPointerDown={(event) => (event.cancelBubble = true)}
+      onPointerUp={(event) => {
+        event.cancelBubble = true
+        onToggle()
+      }}
+      onMouseEnter={(event) => {
+        const container = event.target.getStage()?.container()
+        if (container) container.style.cursor = 'pointer'
+      }}
+      onMouseLeave={(event) => {
+        const container = event.target.getStage()?.container()
+        if (container) container.style.cursor = ''
+      }}
+    >
+      <Circle radius={15} fill="#101a16" stroke={color} strokeWidth={3} />
+      <Rect
+        x={-6}
+        y={-8}
+        width={12}
+        height={16}
+        cornerRadius={2}
+        stroke={color}
+        strokeWidth={2.5}
+        fill={state === 'open' ? undefined : color}
+      />
+      {state === 'locked' && <Circle x={0} y={1} radius={2} fill="#101a16" />}
+    </Group>
+  )
 }
 
 function GridShape({ grid, cols, rows, color, opacity }: { grid: Grid; cols: number; rows: number; color: string; opacity: number }) {
@@ -277,10 +455,12 @@ function GridShape({ grid, cols, rows, color, opacity }: { grid: Grid; cols: num
 type Draft =
   | { kind: 'brush'; points: Point[] }
   | { kind: 'rect' | 'ellipse' | 'line' | 'ruler' | 'template' | 'calibrate'; from: Point; to: Point }
+  | { kind: 'wall'; points: Point[]; hover: Point }
   | null
 
 export function TableCanvas(props: CanvasProps) {
-  const { scene, gm, me, tool, layer, visibleLayers, selectedId, style, template, view, onView, onSelect, onCreate, onUpdate } = props
+  const { scene, gm, me, tool, layer, visibleLayers, selectedId, style, template, view, onView, onSelect, onCreate, onUpdate, vision } =
+    props
   const container = useRef<HTMLDivElement>(null)
   const stage = useRef<Konva.Stage>(null)
   const transformer = useRef<Konva.Transformer>(null)
@@ -326,6 +506,34 @@ export function TableCanvas(props: CanvasProps) {
     }
   }, [])
 
+  const finishWall = (points: Point[]) => {
+    setDraft(null)
+    const item = wallItem(points, props.wallType)
+    if (item) onCreate(item)
+  }
+  const finishRef = useRef(finishWall)
+  useEffect(() => {
+    finishRef.current = finishWall
+  })
+
+  useEffect(() => {
+    if (draft?.kind !== 'wall') return
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        setDraft(null)
+      } else if (event.key === 'Enter') finishRef.current(draft.points)
+    }
+    window.addEventListener('keydown', key, true)
+    return () => window.removeEventListener('keydown', key, true)
+  }, [draft])
+
+  useEffect(() => {
+    if (tool !== 'wall') setDraft((current) => (current?.kind === 'wall' ? null : current))
+  }, [tool])
+
+  const corner = (p: Point, free: boolean) => (free || grid.type === 'none' ? p : snap(p, { ...grid, type: 'square' }, 2))
+
   const pointer = (): Point => stage.current?.getRelativePointerPosition() ?? { x: 0, y: 0 }
   const panning = tool === 'pan' || spacePan
 
@@ -341,20 +549,37 @@ export function TableCanvas(props: CanvasProps) {
       setDraft({ kind: tool, from: tool === 'template' ? snap(p, grid, 2) : p, to: p })
   }
 
-  const onMove = () => {
+  const onMove = (event: Konva.KonvaEventObject<PointerEvent>) => {
     if (!draft) return
     const p = pointer()
-    if (draft.kind === 'brush') setDraft({ kind: 'brush', points: [...draft.points, p] })
+    if (draft.kind === 'wall') setDraft({ ...draft, hover: corner(p, event.evt.altKey) })
+    else if (draft.kind === 'brush') setDraft({ kind: 'brush', points: [...draft.points, p] })
     else setDraft({ ...draft, to: p })
   }
 
-  const onUp = () => {
-    if (panning) return
+  const onUp = (event: Konva.KonvaEventObject<PointerEvent>) => {
+    if (panning || event.evt.button === 1) return
     const p = pointer()
+    if (tool === 'wall') {
+      const at = corner(p, event.evt.altKey)
+      const points = draft?.kind === 'wall' ? draft.points : []
+      const first = points[0]
+      if (first && points.length > 2 && Math.hypot(first.x - at.x, first.y - at.y) < grid.size / 4) return finishWall([...points, first])
+      const last = points[points.length - 1]
+      const next = last && last.x === at.x && last.y === at.y ? points : [...points, at]
+      if (props.wallType !== 'wall' && next.length === 2) return finishWall(next)
+      setDraft({ kind: 'wall', points: next, hover: at })
+      return
+    }
+    if (tool === 'light') {
+      onCreate(lightItem(grid.type === 'none' || event.evt.altKey ? p : snap(p, grid, 1), props.lightPreset))
+      return
+    }
     if (!draft) {
       if (tool === 'text' || tool === 'token' || tool === 'marker') props.onPlace(tool, p)
       return
     }
+    if (draft.kind === 'wall') return
     setDraft(null)
     if (draft.kind === 'brush') {
       const item = drawingItem(draft.points, layer, style)
@@ -401,7 +626,15 @@ export function TableCanvas(props: CanvasProps) {
   const height = settings.height * settings.grid.size
   const visibleItems = (target: SceneLayer) => scene.items.filter((item) => item.layer === target)
 
+  const shown = (item: SceneItemDto) => {
+    if (!gm && (item.kind === 'wall' || item.kind === 'light')) return false
+    if (vision?.active && item.kind === 'token' && !vision.visibleTokens.has(item.id)) return false
+    if (vision?.active && (item.kind === 'wall' || item.kind === 'light')) return false
+    return true
+  }
+
   const renderItem = (item: SceneItemDto) => {
+    if (!shown(item)) return null
     const editable = canEdit(item, gm, me)
     const draggable = editable && tool === 'select' && !item.locked
     const isTemplate = item.kind === 'template'
@@ -428,6 +661,15 @@ export function TableCanvas(props: CanvasProps) {
             next = { x: center.x - item.width / 2, y: center.y - item.height / 2 }
             node.position(next)
           }
+          if (item.kind === 'token' && !gm && vision) {
+            const from = { x: item.x + item.width / 2, y: item.y + item.height / 2 }
+            const to = { x: next.x + item.width / 2, y: next.y + item.height / 2 }
+            if (pathBlocked(from, to, vision.moveSegments)) {
+              node.position({ x: item.x, y: item.y })
+              props.onBlocked()
+              return
+            }
+          }
           onUpdate(item.id, next)
         }}
         onTransformEnd={(event) => {
@@ -453,7 +695,8 @@ export function TableCanvas(props: CanvasProps) {
 
   const ruler =
     draft?.kind === 'ruler' ? measure(snap(draft.from, grid), snap(draft.to, grid), grid, settings.scale, settings.diagonal) : null
-  const resizable = selected && !['template', 'line', 'drawing', 'marker'].includes(selected.kind)
+  const resizable = selected && !['template', 'line', 'drawing', 'marker', 'wall', 'light'].includes(selected.kind)
+  const doors = scene.items.filter((item) => item.kind === 'wall' && wallType(item) === 'door')
 
   return (
     <div
@@ -485,6 +728,7 @@ export function TableCanvas(props: CanvasProps) {
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
+        onDblClick={() => draft?.kind === 'wall' && finishWall(draft.points)}
         onTouchMove={onTouchMove}
         onTouchEnd={() => (pinch.current = null)}
       >
@@ -506,10 +750,26 @@ export function TableCanvas(props: CanvasProps) {
         {LAYER_ORDER.slice(1).map((target) =>
           visibleLayers[target] && (target !== 'gm' || gm) ? <Layer key={target}>{visibleItems(target).map(renderItem)}</Layer> : null
         )}
+        {doors.length > 0 && (
+          <Layer>
+            {doors.map((door) => (
+              <DoorHandle
+                key={door.id}
+                item={door}
+                onToggle={() => tool === 'select' && props.onDoor(door.id, doorState(door) === 'open' ? 'closed' : 'open')}
+              />
+            ))}
+          </Layer>
+        )}
+        {vision?.active && (
+          <Layer listening={false}>
+            <FogShape vision={vision} preview={gm} />
+          </Layer>
+        )}
         <Layer>
           <Transformer
             ref={transformer}
-            rotateEnabled={selected?.kind !== 'token'}
+            rotateEnabled={!['token', 'wall', 'light'].includes(selected?.kind ?? '')}
             resizeEnabled={Boolean(resizable)}
             keepRatio={selected?.kind === 'token'}
             shiftBehavior="default"
@@ -564,6 +824,20 @@ export function TableCanvas(props: CanvasProps) {
                 scale={settings.scale}
               />
             </Group>
+          )}
+          {draft?.kind === 'wall' && (
+            <>
+              <Line
+                points={[...draft.points, draft.hover].flatMap((p) => [p.x, p.y])}
+                stroke={WALL_COLORS[props.wallType]}
+                strokeWidth={5 / view.scale}
+                dash={[10 / view.scale, 6 / view.scale]}
+                lineCap="round"
+              />
+              {draft.points.map((p, i) => (
+                <Circle key={i} x={p.x} y={p.y} radius={6 / view.scale} fill={WALL_COLORS[props.wallType]} />
+              ))}
+            </>
           )}
           {ruler && draft?.kind === 'ruler' && (
             <>
