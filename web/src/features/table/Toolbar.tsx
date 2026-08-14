@@ -1,6 +1,7 @@
-import { SCENE_LAYER_LABELS, SCENE_LAYERS, type SceneLayer } from '@taverna/shared'
-import type { TemplateKind } from '@taverna/tabletop'
+import { LIGHT_PRESETS, type LightPreset, SCENE_LAYER_LABELS, SCENE_LAYERS, type SceneLayer, WALL_TYPE_LABELS } from '@taverna/shared'
+import type { TemplateKind, WallType } from '@taverna/tabletop'
 import {
+  BrickWall,
   Brush,
   Circle,
   Crosshair,
@@ -8,6 +9,7 @@ import {
   EyeOff,
   Hand,
   ImagePlus,
+  Lightbulb,
   MapPin,
   Minus,
   MousePointer2,
@@ -34,6 +36,8 @@ const ICONS: Record<Tool, LucideIcon> = {
   ruler: Ruler,
   template: Triangle,
   token: UserRound,
+  wall: BrickWall,
+  light: Lightbulb,
   calibrate: Crosshair
 }
 
@@ -54,6 +58,13 @@ interface ToolbarProps {
   onTemplate: (template: { kind: TemplateKind; size: number }) => void
   unit: string
   onGallery: () => void
+  wallType: WallType
+  onWallType: (type: WallType) => void
+  lightPreset: LightPreset
+  onLightPreset: (preset: LightPreset) => void
+  visionOn: boolean
+  preview: boolean
+  onPreview: (preview: boolean) => void
 }
 
 export function Toolbar(props: ToolbarProps) {
@@ -161,6 +172,46 @@ export function Toolbar(props: ToolbarProps) {
             {props.unit}
           </label>
         </div>
+      )}
+      {tool === 'wall' && (
+        <div className="flex items-center gap-2">
+          <Select<WallType>
+            label="O que desenhar"
+            size="sm"
+            value={props.wallType}
+            onChange={props.onWallType}
+            options={(Object.keys(WALL_TYPE_LABELS) as WallType[]).map((value) => ({ value, label: WALL_TYPE_LABELS[value] }))}
+            className="w-32"
+          />
+          <span className="text-sm text-moss max-md:hidden">
+            {props.wallType === 'wall' ? 'Clique em cada canto. Enter ou clique duplo termina.' : 'Clique nas duas pontas.'}
+          </span>
+        </div>
+      )}
+
+      {tool === 'light' && (
+        <Select<LightPreset>
+          label="Tipo de luz"
+          size="sm"
+          value={props.lightPreset}
+          onChange={props.onLightPreset}
+          options={(Object.keys(LIGHT_PRESETS) as LightPreset[]).map((value) => ({ value, label: LIGHT_PRESETS[value].label }))}
+          className="w-48"
+        />
+      )}
+
+      {gm && props.visionOn && (
+        <button
+          type="button"
+          aria-pressed={props.preview}
+          onClick={() => props.onPreview(!props.preview)}
+          className={cn(
+            'ml-auto flex items-center gap-1.5 rounded-control px-2.5 py-1.5 text-sm text-moss hover:text-bone',
+            props.preview && 'bg-brass/20 text-brass-bright ring-1 ring-brass/60'
+          )}
+        >
+          <Eye className="size-4" aria-hidden /> Ver como os jogadores
+        </button>
       )}
     </div>
   )
