@@ -1,14 +1,21 @@
 import {
+  AMBIENT_LABELS,
   BACKGROUND_TEXTURE_LABELS,
   BACKGROUND_TEXTURES,
+  DARKVISION_CELLS,
+  DOOR_STATE_LABELS,
+  LIGHT_PRESETS,
+  type LightPreset,
+  type MemberDto,
   SCENE_LAYER_LABELS,
   SCENE_LAYERS,
   type SceneItemDto,
   type SceneLayer,
   type SceneSettings,
-  type SceneWithItemsDto
+  type SceneWithItemsDto,
+  WALL_TYPE_LABELS
 } from '@taverna/shared'
-import { fitToSquares, squaresOf } from '@taverna/tabletop'
+import { type DoorState, doorState, fitToSquares, squaresOf, type WallType, wallType } from '@taverna/tabletop'
 import { ArrowDownToLine, ArrowUpToLine, FlipHorizontal2, FlipVertical2, Lock, LockOpen, Trash2 } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
@@ -23,6 +30,45 @@ function ColorField({ label, value, onCommit }: { label: string; value: string; 
       <input type="color" value={draft} onChange={(e) => change(e.target.value)} className="h-8 w-12 rounded" />
     </label>
   )
+}
+
+function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-moss">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 accent-[var(--color-brass)]"
+      />
+      {label}
+    </label>
+  )
+}
+
+function Labeled({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-moss" aria-hidden>
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+const NO_LIGHT = 'none'
+
+function distanceLabel(cells: number, scale: SceneSettings['scale']) {
+  const value = Math.round(cells * scale.value * 10) / 10
+  return `${value.toLocaleString('pt-BR')} ${scale.unit === 'm' ? 'm' : value === 1 ? 'pé' : 'pés'}`
+}
+
+function presetOf(bright: number, dim: number): LightPreset | 'custom' {
+  const found = (Object.keys(LIGHT_PRESETS) as LightPreset[]).find(
+    (key) => LIGHT_PRESETS[key].bright === bright && LIGHT_PRESETS[key].dim === dim
+  )
+  return found ?? 'custom'
 }
 
 function TextField({
@@ -99,6 +145,7 @@ interface ItemInspectorProps {
   onUpdate: (patch: Partial<SceneItemDto>) => void
   onRemove: () => void
   onCalibrate: () => void
+  members: MemberDto[]
 }
 
 const KIND_LABELS: Record<SceneItemDto['kind'], string> = {
@@ -111,10 +158,12 @@ const KIND_LABELS: Record<SceneItemDto['kind'], string> = {
   text: 'Texto',
   marker: 'Marcador',
   token: 'Token',
-  template: 'Molde de área'
+  template: 'Molde de área',
+  wall: 'Parede',
+  light: 'Luz'
 }
 
-export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalibrate }: ItemInspectorProps) {
+export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalibrate, members }: ItemInspectorProps) {
   const editable = canEdit(item, gm, me)
   const grid = {
     type: scene.settings.grid.type,
@@ -155,6 +204,119 @@ export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalib
             <Section title="Token">
               <TextField label="Nome do token" value={String(item.data.name ?? '')} maxLength={40} onCommit={(name) => setData({ name })} />
               <ColorField label="Cor" value={String(item.data.color ?? '#c58b3a')} onCommit={(color) => setData({ color })} />
+            </Section>
+          )}
+          {item.kind === 'token' && (
+            <Section title="Visão e luz">
+              {gm && (
+                <Labeled label="Controlado por">
+                  <Select
+                    label="Controlado por"
+                    size="sm"
+                    value={item.ownerId ?? NO_LIGHT}
+                    onChange={(value) => onUpdate({ ownerId: value === NO_LIGHT ? null : value })}
+                    options={[
+                      { value: NO_LIGHT, label: 'Mestre (criatura)' },
+                      ...members.filter((m) => m.role !== 'gm').map((m) => ({ value: m.userId, label: m.displayName }))
+                    ]}
+                  />
+                </Labeled>
+              )}
+              <Check label="Enxerga (revela a névoa)" checked={item.data.vision !== false} onChange={(vision) => setData({ vision })} />
+              <Labeled label="Visão no escuro">
+                <Select
+                  label="Visão no escuro"
+                  size="sm"
+                  value={String(Number(item.data.darkvision ?? 0))}
+                  onChange={(value) => setData({ darkvision: Number(value) })}
+                  options={DARKVISION_CELLS.map((cells) => ({
+                    value: String(cells),
+                    label: cells === 0 ? 'Nenhuma' : distanceLabel(cells, scene.settings.scale)
+                  }))}
+                />
+              </Labeled>
+              <Labeled label="Luz que carrega">
+                <Select
+                  label="Luz que carrega"
+                  size="sm"
+                  value={item.data.light ? String((item.data.light as { preset?: string }).preset ?? NO_LIGHT) : NO_LIGHT}
+                  onChange={(value) =>
+                    setData({
+                      light: value === NO_LIGHT ? null : { preset: value, ...LIGHT_PRESETS[value as LightPreset] }
+                    })
+                  }
+                  options={[
+                    { value: NO_LIGHT, label: 'Nenhuma' },
+                    ...(Object.keys(LIGHT_PRESETS) as LightPreset[]).map((value) => ({ value, label: LIGHT_PRESETS[value].label }))
+                  ]}
+                />
+              </Labeled>
+            </Section>
+          )}
+          {item.kind === 'wall' && gm && (
+            <Section title="Parede">
+              <Labeled label="Tipo">
+                <Select<WallType>
+                  label="Tipo de parede"
+                  size="sm"
+                  value={wallType(item)}
+                  onChange={(type) => setData({ type, state: type === 'door' ? doorState(item) : undefined })}
+                  options={(Object.keys(WALL_TYPE_LABELS) as WallType[]).map((value) => ({ value, label: WALL_TYPE_LABELS[value] }))}
+                />
+              </Labeled>
+              {wallType(item) === 'door' && (
+                <Labeled label="Porta">
+                  <Select<DoorState>
+                    label="Estado da porta"
+                    size="sm"
+                    value={doorState(item)}
+                    onChange={(state) => setData({ state })}
+                    options={(Object.keys(DOOR_STATE_LABELS) as DoorState[]).map((value) => ({ value, label: DOOR_STATE_LABELS[value] }))}
+                  />
+                </Labeled>
+              )}
+              <p className="text-sm text-moss-dim">
+                Paredes e portas fechadas barram a visão e o movimento. Janelas deixam ver, mas não passar.
+              </p>
+            </Section>
+          )}
+          {item.kind === 'light' && gm && (
+            <Section title="Luz">
+              <Labeled label="Tipo de luz">
+                <Select
+                  label="Tipo de luz"
+                  size="sm"
+                  value={presetOf(Number(item.data.bright ?? 0), Number(item.data.dim ?? 0))}
+                  onChange={(value) => value !== 'custom' && setData({ preset: value, ...LIGHT_PRESETS[value as LightPreset] })}
+                  options={[
+                    ...(Object.keys(LIGHT_PRESETS) as LightPreset[]).map((value) => ({ value, label: LIGHT_PRESETS[value].label })),
+                    { value: 'custom', label: 'Personalizada' }
+                  ]}
+                />
+              </Labeled>
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label="Luz plena (quadrados)"
+                  value={Number(item.data.bright ?? 0)}
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  onCommit={(bright) => setData({ bright, dim: Math.max(bright, Number(item.data.dim ?? 0)) })}
+                />
+                <NumberField
+                  label="Penumbra até (quadrados)"
+                  value={Number(item.data.dim ?? 0)}
+                  min={0}
+                  max={200}
+                  step={0.5}
+                  onCommit={(dim) => setData({ dim })}
+                />
+              </div>
+              <p className="text-sm text-moss-dim">
+                Luz plena até {distanceLabel(Number(item.data.bright ?? 0), scene.settings.scale)}, penumbra até{' '}
+                {distanceLabel(Number(item.data.dim ?? 0), scene.settings.scale)}.
+              </p>
+              <ColorField label="Cor do ícone" value={String(item.data.color ?? '#ffd27a')} onCommit={(color) => setData({ color })} />
             </Section>
           )}
           {item.kind === 'text' && (
@@ -293,10 +455,52 @@ export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalib
   )
 }
 
-export function SceneSettingsPanel({ settings, onChange }: { settings: SceneSettings; onChange: (settings: SceneSettings) => void }) {
+export function SceneSettingsPanel({
+  settings,
+  onChange,
+  onResetExplored
+}: {
+  settings: SceneSettings
+  onChange: (settings: SceneSettings) => void
+  onResetExplored: () => void
+}) {
   const set = <K extends keyof SceneSettings>(key: K, value: SceneSettings[K]) => onChange({ ...settings, [key]: value })
+  const lighting = settings.lighting
   return (
     <div className="flex flex-col gap-3" aria-label="Configurações da cena">
+      <Section title="Visão e névoa">
+        <Check
+          label="Jogadores só veem o que os tokens enxergam"
+          checked={lighting.vision}
+          onChange={(vision) => set('lighting', { ...lighting, vision })}
+        />
+        {lighting.vision && (
+          <>
+            <Labeled label="Luz ambiente">
+              <Select<SceneSettings['lighting']['ambient']>
+                label="Luz ambiente"
+                size="sm"
+                value={lighting.ambient}
+                onChange={(ambient) => set('lighting', { ...lighting, ambient })}
+                options={(Object.keys(AMBIENT_LABELS) as SceneSettings['lighting']['ambient'][]).map((value) => ({
+                  value,
+                  label: AMBIENT_LABELS[value]
+                }))}
+              />
+            </Labeled>
+            <Check
+              label="Lembrar o que já foi visto"
+              checked={lighting.explore}
+              onChange={(explore) => set('lighting', { ...lighting, explore })}
+            />
+            {lighting.explore && (
+              <Button size="sm" variant="ghost" className="self-start" onClick={onResetExplored}>
+                Esquecer as áreas vistas
+              </Button>
+            )}
+          </>
+        )}
+      </Section>
       <Section title="Grade">
         <Select
           label="Tipo de grade"
