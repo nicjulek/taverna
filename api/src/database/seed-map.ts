@@ -56,3 +56,86 @@ ${ties}
 }
 
 export const MINE_MAP = { cols: COLS, rows: ROWS, cell: CELL }
+
+const ROOMS = [
+  [595, 315, 420, 300],
+  [1015, 105, 315, 280],
+  [1015, 665, 350, 250],
+  [35, 735, 250, 210]
+] as const
+
+const TUNNELS = [
+  [70, 840, 385, 840],
+  [385, 840, 385, 455],
+  [385, 455, 805, 455],
+  [805, 455, 805, 245],
+  [805, 245, 1225, 245],
+  [805, 455, 1085, 455],
+  [1085, 455, 1085, 805],
+  [1085, 805, 1295, 805]
+] as const
+
+function nearSegment(x: number, y: number, [ax, ay, bx, by]: readonly number[]): number {
+  const dx = bx! - ax!
+  const dy = by! - ay!
+  const t = Math.max(0, Math.min(1, ((x - ax!) * dx + (y - ay!) * dy) / (dx * dx + dy * dy)))
+  return Math.hypot(x - (ax! + dx * t), y - (ay! + dy * t))
+}
+
+export function mineWalls(step = 35): number[][] {
+  const cols = (COLS * CELL) / step
+  const rows = (ROWS * CELL) / step
+  const floor = (c: number, r: number) => {
+    if (c < 0 || r < 0 || c >= cols || r >= rows) return false
+    const x = (c + 0.5) * step
+    const y = (r + 0.5) * step
+    return (
+      ROOMS.some(([rx, ry, w, h]) => x >= rx && x <= rx + w && y >= ry && y <= ry + h) || TUNNELS.some((s) => nearSegment(x, y, s) <= 75)
+    )
+  }
+  const edges: [number, number, number, number][] = []
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!floor(c, r)) continue
+      if (!floor(c, r - 1)) edges.push([c, r, c + 1, r])
+      if (!floor(c, r + 1)) edges.push([c, r + 1, c + 1, r + 1])
+      if (!floor(c - 1, r)) edges.push([c, r, c, r + 1])
+      if (!floor(c + 1, r)) edges.push([c + 1, r, c + 1, r + 1])
+    }
+  }
+  const key = (x: number, y: number) => `${x},${y}`
+  const at = new Map<string, number[]>()
+  edges.forEach(([ax, ay, bx, by], i) => {
+    for (const k of [key(ax, ay), key(bx, by)]) at.set(k, [...(at.get(k) ?? []), i])
+  })
+  const used = new Set<number>()
+  const lines: number[][] = []
+  for (let i = 0; i < edges.length; i++) {
+    if (used.has(i)) continue
+    used.add(i)
+    const [ax, ay, bx, by] = edges[i]!
+    const path = [ax, ay, bx, by]
+    let [x, y] = [bx, by]
+    for (;;) {
+      const next = (at.get(key(x, y)) ?? []).find((j) => !used.has(j))
+      if (next === undefined) break
+      used.add(next)
+      const [cx, cy, dx, dy] = edges[next]!
+      ;[x, y] = cx === x && cy === y ? [dx, dy] : [cx, cy]
+      path.push(x, y)
+    }
+    const simple: number[] = [path[0]!, path[1]!]
+    for (let p = 2; p < path.length; p += 2) {
+      const n = simple.length
+      if (p + 2 < path.length) {
+        const [px, py] = [simple[n - 2]!, simple[n - 1]!]
+        const [qx, qy] = [path[p]!, path[p + 1]!]
+        const [rx, ry] = [path[p + 2]!, path[p + 3]!]
+        if ((qx - px) * (ry - qy) === (qy - py) * (rx - qx)) continue
+      }
+      simple.push(path[p]!, path[p + 1]!)
+    }
+    lines.push(simple.map((v) => v * step))
+  }
+  return lines
+}

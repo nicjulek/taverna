@@ -7,7 +7,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { newInviteCode } from '../modules/campaigns/campaigns.service'
 import * as schema from './schema'
-import { mineMapSvg, MINE_MAP } from './seed-map'
+import { mineMapSvg, MINE_MAP, mineWalls } from './seed-map'
 
 export const DEMO_PASSWORD = 'taverna123'
 
@@ -144,7 +144,13 @@ async function seed(): Promise<void> {
   const [mine, village] = await db
     .insert(schema.scenes)
     .values([
-      { campaignId: campaign!.id, name: 'Mina antiga', sortOrder: 0, active: true, settings: DEFAULT_SCENE_SETTINGS },
+      {
+        campaignId: campaign!.id,
+        name: 'Mina antiga',
+        sortOrder: 0,
+        active: true,
+        settings: { ...DEFAULT_SCENE_SETTINGS, lighting: { vision: true, ambient: 'dark', explore: true } }
+      },
       {
         campaignId: campaign!.id,
         name: 'Vau-do-Corvo',
@@ -158,6 +164,33 @@ async function seed(): Promise<void> {
     ])
     .returning()
   const cell = MINE_MAP.cell
+  const origin = { x: 5 * cell, y: 2 * cell }
+  const wall = (points: number[], data: Record<string, unknown> = { type: 'wall' }) => {
+    const xs = points.filter((_, i) => i % 2 === 0)
+    const ys = points.filter((_, i) => i % 2 === 1)
+    const minX = Math.min(...xs)
+    const minY = Math.min(...ys)
+    return {
+      sceneId: mine!.id,
+      layer: 'objects' as const,
+      kind: 'wall' as const,
+      x: origin.x + minX,
+      y: origin.y + minY,
+      width: Math.max(1, Math.max(...xs) - minX),
+      height: Math.max(1, Math.max(...ys) - minY),
+      locked: true,
+      z: 1,
+      createdBy: gm.id,
+      data: { ...data, points: points.map((v, i) => v - (i % 2 === 0 ? minX : minY)) }
+    }
+  }
+  await db
+    .insert(schema.sceneItems)
+    .values([
+      ...mineWalls().map((points) => wall(points)),
+      wall([560, 385, 560, 525], { type: 'door', state: 'closed' }),
+      wall([980, 175, 980, 315], { type: 'door', state: 'locked' })
+    ])
   const at = (col: number, row: number, span = 1) => ({ x: col * cell, y: row * cell, width: cell * span, height: cell * span })
   await db.insert(schema.sceneItems).values([
     {
@@ -176,14 +209,26 @@ async function seed(): Promise<void> {
     {
       sceneId: mine!.id,
       layer: 'objects',
-      kind: 'template',
-      x: 22 * cell,
-      y: 5.5 * cell,
-      width: 1,
-      height: 1,
+      kind: 'light',
+      x: 21.5 * cell - 20,
+      y: 5.5 * cell - 20,
+      width: 40,
+      height: 40,
       z: 1,
       createdBy: gm.id,
-      data: { template: 'sphere', size: 6, angle: 0, color: '#9fd6c4' }
+      data: { preset: 'light', bright: 4, dim: 8, color: '#9fd6c4' }
+    },
+    {
+      sceneId: mine!.id,
+      layer: 'objects',
+      kind: 'light',
+      x: 16.5 * cell - 20,
+      y: 8.6 * cell - 20,
+      width: 40,
+      height: 40,
+      z: 1,
+      createdBy: gm.id,
+      data: { preset: 'torch', bright: 4, dim: 8, color: '#ffd27a' }
     },
     {
       sceneId: mine!.id,
@@ -205,7 +250,7 @@ async function seed(): Promise<void> {
       z: 3,
       ownerId: ana.id,
       createdBy: gm.id,
-      data: { name: 'Lia Pés-Leves', color: ana.color, span: 1, characterId: liaRow!.id }
+      data: { name: 'Lia Pés-Leves', color: ana.color, span: 1, characterId: liaRow!.id, light: { preset: 'torch', bright: 4, dim: 8 } }
     },
     {
       sceneId: mine!.id,
@@ -215,7 +260,7 @@ async function seed(): Promise<void> {
       z: 4,
       ownerId: bruno.id,
       createdBy: gm.id,
-      data: { name: 'Doran Martelo-de-Brasa', color: bruno.color, span: 1, characterId: doranRow!.id }
+      data: { name: 'Doran Martelo-de-Brasa', color: bruno.color, span: 1, characterId: doranRow!.id, darkvision: 12 }
     },
     {
       sceneId: mine!.id,
@@ -237,7 +282,7 @@ async function seed(): Promise<void> {
     },
     {
       sceneId: mine!.id,
-      layer: 'gm',
+      layer: 'tokens',
       kind: 'token',
       ...at(21, 4),
       z: 7,
