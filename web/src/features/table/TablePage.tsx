@@ -1,5 +1,5 @@
-import { isGameMaster, type AssetDto, type SceneItemDto, type SceneItemInput, type SceneLayer } from '@taverna/shared'
-import { calibrate, type Point, type TemplateKind } from '@taverna/tabletop'
+import { isGameMaster, type AssetDto, type LightPreset, type SceneItemDto, type SceneItemInput, type SceneLayer } from '@taverna/shared'
+import { calibrate, type Point, type TemplateKind, type WallType } from '@taverna/tabletop'
 import { Map as MapIcon, Maximize } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import { PlaceDialog, type PlaceKind, type PlaceValues } from './PlaceDialog'
 import { ScenesPanel } from './ScenesPanel'
 import { TableCanvas, type View } from './TableCanvas'
 import { Toolbar } from './Toolbar'
+import { useVision } from './vision'
 
 const ALL_VISIBLE: Record<SceneLayer, boolean> = { map: true, objects: true, tokens: true, gm: true }
 
@@ -55,7 +56,23 @@ export function TablePage() {
   const [view, setView] = useState<View>({ x: 24, y: 24, scale: 0.6 })
   const [placing, setPlacing] = useState<{ kind: PlaceKind; at: Point } | null>(null)
   const [gallery, setGallery] = useState(false)
+  const [wallType, setWallType] = useState<WallType>('wall')
+  const [lightPreset, setLightPreset] = useState<LightPreset>('torch')
+  const [preview, setPreview] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
+  const vision = useVision(sceneQuery.data ?? null, gm, me, preview)
+  const exploreMutate = mutations.explore.mutate
+  const seenKey = vision?.seen.join(',') ?? ''
+  const seenScene = sceneQuery.data?.id ?? null
+  const seenRef = useRef<number[]>([])
+  useEffect(() => {
+    seenRef.current = vision?.seen ?? []
+  }, [vision])
+  useEffect(() => {
+    if (gm || !seenScene || !seenKey) return
+    const timer = window.setTimeout(() => exploreMutate({ sceneId: seenScene, cells: seenRef.current }), 500)
+    return () => window.clearTimeout(timer)
+  }, [gm, seenScene, seenKey, exploreMutate])
 
   const sceneId = scene?.id ?? null
   const selected = scene?.items.find((item) => item.id === selectedId) ?? null
@@ -136,7 +153,10 @@ export function TablePage() {
     const { kind, at } = placing
     setPlacing(null)
     if (kind === 'token') {
-      create(tokenItem(at, grid, { name: values.text, color: values.color, span: values.span, characterId: values.characterId }))
+      create({
+        ...tokenItem(at, grid, { name: values.text, color: values.color, span: values.span, characterId: values.characterId }),
+        ownerId: characters.data?.find((c) => c.id === values.characterId)?.ownerId ?? null
+      })
     } else if (kind === 'marker') {
       const size = Math.round(grid.size * 0.8)
       create({
@@ -215,7 +235,10 @@ export function TablePage() {
     )
   }
 
-  const tokens = scene.items.filter((item) => item.kind === 'token' && (gm || item.layer !== 'gm'))
+  const tokens = scene.items.filter(
+    (item) => item.kind === 'token' && (gm || item.layer !== 'gm') && (!vision?.active || vision.visibleTokens.has(item.id))
+  )
+  const blind = !gm && vision?.active && vision.viewers.length === 0
 
   return (
     <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[15rem_minmax(0,1fr)_18rem]">
@@ -247,6 +270,13 @@ export function TablePage() {
           onTemplate={setTemplate}
           unit={scene.settings.scale.unit === 'm' ? 'm' : 'pés'}
           onGallery={() => setGallery(true)}
+          wallType={wallType}
+          onWallType={setWallType}
+          lightPreset={lightPreset}
+          onLightPreset={setLightPreset}
+          visionOn={scene.settings.lighting.vision}
+          preview={preview}
+          onPreview={setPreview}
         />
         <div
           ref={wrapper}
@@ -282,6 +312,11 @@ export function TablePage() {
               toast('Mapa ajustado à grade.')
             }}
             onPlace={(kind, at) => setPlacing({ kind, at })}
+            vision={vision}
+            wallType={wallType}
+            lightPreset={lightPreset}
+            onDoor={(id, state) => mutations.door.mutate({ sceneId: scene.id, id, state }, { onError: fail })}
+            onBlocked={() => toast.error('Uma parede bloqueia o caminho')}
             onDropFiles={async (files, at) => {
               const sent = await upload.run(files)
               for (const [index, asset] of sent.entries())
@@ -291,6 +326,11 @@ export function TablePage() {
           <Button size="sm" variant="secondary" onClick={fit} className="absolute top-3 right-3">
             <Maximize /> Ver a cena toda
           </Button>
+          {blind && (
+            <p role="status" className="absolute bottom-3 left-3 max-w-sm rounded-control bg-surface/90 px-3 py-1.5 text-sm">
+              Você ainda não tem um token nesta cena. Peça ao mestre para colocar o seu.
+            </p>
+          )}
           {upload.pending && (
             <p role="status" className="absolute bottom-3 left-3 rounded-control bg-surface/90 px-3 py-1.5 text-sm">
               Enviando mapa…
@@ -312,6 +352,7 @@ export function TablePage() {
             me={me}
             onUpdate={(patch) => update(selected.id, patch)}
             onRemove={() => remove(selected.id)}
+            members={campaign.memberList}
             onCalibrate={() => {
               setTool('calibrate')
               toast('Arraste sobre uma célula da grade desenhada no mapa.')
@@ -321,6 +362,9 @@ export function TablePage() {
           <SceneSettingsPanel
             settings={scene.settings}
             onChange={(settings) => mutations.update.mutate({ id: scene.id, settings }, { onError: fail })}
+            onResetExplored={() =>
+              mutations.resetExplored.mutate(scene.id, { onSuccess: () => toast('A névoa voltou a cobrir a cena.'), onError: fail })
+            }
           />
         ) : (
           <p className="text-sm text-moss">
