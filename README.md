@@ -15,6 +15,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Fichas de D&D 5e**: atributos, salvaguardas e perícias com especialização e pau para toda obra, PV e PV temporário, testes contra a morte, dados de vida, descanso curto e longo, ataques com dano e crítico, magias com espaços por círculo, pacto e concentração, e contadores de classe (Ki, Fúria, Dados de Superioridade, Inspiração Bárdica, Pontos de Feitiçaria) ou livres. Tudo que tem número rola com um clique, com vantagem ou desvantagem, e a ficha se salva sozinha. O dono e os mestres editam; o resto do grupo vê, a não ser que o dono esconda.
 - **Compêndio**: as 1.155 entradas do SRD 5.1 (319 magias, 334 monstros, 476 itens, condições, raças, talento e antecedente), com busca e filtros por círculo, escola, classe, tipo de criatura, nível de desafio, categoria e raridade. Os monstros abrem numa ficha de pergaminho em que ataque, dano, PV e atributos rolam com um clique, e as rolagens do mestre ficam secretas. O mestre cria homebrew de magias, itens, monstros, condições e talentos, do zero ou copiando uma entrada do SRD, e publica quando quiser. Magias e armas vão para a ficha arrastando ou pelo botão de adicionar.
 - **Mesa virtual**: cenas com mapa, grade e tokens, e uma de cada vez aberta para os jogadores, trocada com um clique. O mestre arrasta o mapa do computador para a mesa ou escolhe na galeria (JPG, PNG, WebP, GIF, SVG, WebM e MP4, até 25 MB), coloca várias imagens na mesma cena ou começa do zero com cor ou textura de fundo. O mapa se ajusta pelos cantos (Shift mantém a proporção), gira, espelha, trava e encaixa num tamanho em quadrados, como 30 × 20, ou na grade desenhada na própria imagem. Grade quadrada, hexagonal ou nenhuma, com escala por quadrado em metros ou pés. Pincel, retângulo, elipse, linha, texto e marcadores, régua que conta quadrados e distância, e moldes de área de cone, esfera, linha, cilindro e cubo. Quatro camadas (mapa, objetos, tokens e a do mestre, que os jogadores não recebem) e tudo aparece para o grupo na hora.
+- **Luz e névoa de guerra**: paredes desenhadas clicando canto a canto pelo contorno do mapa, portas que abrem, fecham ou trancam e janelas que deixam ver, mas não passar. Luzes de vela, tocha, lampião, lanterna e das magias Luz e Luz do Dia, com luz plena e penumbra, presas no mapa ou carregadas pelo token. Visão no escuro por token. Com a névoa ligada, cada jogador só vê o que o próprio token enxerga, e o que o grupo já viu fica no mapa, mais escuro. O mestre vê tudo e pode conferir a mesa do jeito que os jogadores veem.
 - **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
@@ -33,6 +34,8 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 ![Ficha](docs/ficha.webp)
 
 ![Mesa virtual](docs/mesa.webp)
+
+![Névoa de guerra do ponto de vista de um jogador](docs/nevoa.webp)
 
 ![Compêndio](docs/compendio.webp)
 
@@ -128,6 +131,12 @@ A mesa desenha com [Konva](https://konvajs.org). Cada item da cena (imagem, víd
 
 Os jogadores só recebem a cena aberta, e nunca os itens da camada do mestre: a API filtra antes de responder e o tempo real manda esses itens só para os mestres. Jogadores podem desenhar, escrever, marcar e medir nas camadas de objetos e tokens, e mexer no que eles mesmos colocaram ou no token que é deles.
 
+### Visão, luz e névoa
+
+A linha de visão é calculada a partir do centro de cada token, lançando raios até os cantos das paredes e das portas fechadas (`packages/tabletop/src/vision.ts`). Um ponto aparece para o jogador quando está na linha de visão do token dele e iluminado: luz ambiente de dia ou penumbra, alguma luz que também enxergue o ponto, ou dentro do alcance da visão no escuro. A névoa é desenhada por cima do mapa e as áreas vistas ficam guardadas na cena, em meio quadrado de resolução, para todo o grupo. A API também confere o caminho do token: o jogador não atravessa parede, janela nem porta fechada, e só o mestre destranca portas.
+
+As paredes, as luzes e as posições de todos os tokens chegam ao navegador do jogador, como em outras mesas virtuais: quem abrir as ferramentas do navegador consegue ver o que está na névoa. A camada do mestre continua sem sair do servidor.
+
 Os arquivos enviados ficam no PostgreSQL, então não é preciso configurar armazenamento à parte. O tipo do arquivo é conferido pelos primeiros bytes, não pela extensão, e SVG é servido com uma política de segurança que bloqueia scripts.
 
 ## Compêndio e SRD 5.1
@@ -179,35 +188,37 @@ Os testes de integração usam o banco `taverna_test`, criado automaticamente pe
 
 Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sessão.
 
-| Método             | Rota                                            | Descrição                        |
-| ------------------ | ----------------------------------------------- | -------------------------------- |
-| POST               | `/auth/register`, `/auth/login`, `/auth/logout` | Sessão                           |
-| GET, PATCH         | `/auth/me`                                      | Perfil                           |
-| GET, POST          | `/campaigns`                                    | Suas campanhas e criar           |
-| GET, PATCH, DELETE | `/campaigns/:id`                                | Detalhes, editar e apagar        |
-| POST, DELETE       | `/campaigns/:id/invite`                         | Gerar ou desativar o link        |
-| GET                | `/invites/:code`                                | Prévia do convite                |
-| POST               | `/invites/:code/accept`                         | Entrar na campanha               |
-| GET                | `/campaigns/:id/members`                        | Participantes                    |
-| PATCH, DELETE      | `/campaigns/:id/members/:userId`                | Mudar papel e remover            |
-| GET, POST          | `/campaigns/:id/journals`                       | Páginas visíveis e criar         |
-| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`               | Ler, editar, permissões e apagar |
-| GET, POST          | `/campaigns/:id/characters`                     | Fichas visíveis e criar          |
-| GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`        | Ler, editar, permissões e apagar |
-| GET, POST          | `/campaigns/:id/compendium`                     | Buscar e criar homebrew          |
-| GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`            | Ler, editar e apagar homebrew    |
-| GET, POST          | `/campaigns/:id/rolls`                          | Rolagens visíveis e rolar        |
-| GET, POST          | `/campaigns/:id/assets`                         | Galeria e envio de arquivo       |
-| DELETE             | `/campaigns/:id/assets/:assetId`                | Apagar da galeria                |
-| GET                | `/assets/:assetId`                              | Baixar o arquivo                 |
-| GET, POST          | `/campaigns/:id/scenes`                         | Cenas e criar                    |
-| GET                | `/campaigns/:id/scenes/active`                  | Cena aberta para os jogadores    |
-| GET, PATCH, DELETE | `/campaigns/:id/scenes/:sceneId`                | Ler, configurar e apagar         |
-| POST               | `/campaigns/:id/scenes/:sceneId/activate`       | Mostrar aos jogadores            |
-| POST               | `/campaigns/:id/scenes/:sceneId/duplicate`      | Duplicar                         |
-| POST               | `/campaigns/:id/scenes/:sceneId/items`          | Colocar item                     |
-| PATCH, DELETE      | `/campaigns/:id/scenes/:sceneId/items/:itemId`  | Mover, ajustar e apagar item     |
-| GET                | `/health`                                       | Saúde da API e do banco          |
+| Método             | Rota                                                | Descrição                        |
+| ------------------ | --------------------------------------------------- | -------------------------------- |
+| POST               | `/auth/register`, `/auth/login`, `/auth/logout`     | Sessão                           |
+| GET, PATCH         | `/auth/me`                                          | Perfil                           |
+| GET, POST          | `/campaigns`                                        | Suas campanhas e criar           |
+| GET, PATCH, DELETE | `/campaigns/:id`                                    | Detalhes, editar e apagar        |
+| POST, DELETE       | `/campaigns/:id/invite`                             | Gerar ou desativar o link        |
+| GET                | `/invites/:code`                                    | Prévia do convite                |
+| POST               | `/invites/:code/accept`                             | Entrar na campanha               |
+| GET                | `/campaigns/:id/members`                            | Participantes                    |
+| PATCH, DELETE      | `/campaigns/:id/members/:userId`                    | Mudar papel e remover            |
+| GET, POST          | `/campaigns/:id/journals`                           | Páginas visíveis e criar         |
+| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`                   | Ler, editar, permissões e apagar |
+| GET, POST          | `/campaigns/:id/characters`                         | Fichas visíveis e criar          |
+| GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`            | Ler, editar, permissões e apagar |
+| GET, POST          | `/campaigns/:id/compendium`                         | Buscar e criar homebrew          |
+| GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`                | Ler, editar e apagar homebrew    |
+| GET, POST          | `/campaigns/:id/rolls`                              | Rolagens visíveis e rolar        |
+| GET, POST          | `/campaigns/:id/assets`                             | Galeria e envio de arquivo       |
+| DELETE             | `/campaigns/:id/assets/:assetId`                    | Apagar da galeria                |
+| GET                | `/assets/:assetId`                                  | Baixar o arquivo                 |
+| GET, POST          | `/campaigns/:id/scenes`                             | Cenas e criar                    |
+| GET                | `/campaigns/:id/scenes/active`                      | Cena aberta para os jogadores    |
+| GET, PATCH, DELETE | `/campaigns/:id/scenes/:sceneId`                    | Ler, configurar e apagar         |
+| POST               | `/campaigns/:id/scenes/:sceneId/activate`           | Mostrar aos jogadores            |
+| POST               | `/campaigns/:id/scenes/:sceneId/duplicate`          | Duplicar                         |
+| POST               | `/campaigns/:id/scenes/:sceneId/items`              | Colocar item                     |
+| PATCH, DELETE      | `/campaigns/:id/scenes/:sceneId/items/:itemId`      | Mover, ajustar e apagar item     |
+| POST               | `/campaigns/:id/scenes/:sceneId/items/:itemId/door` | Abrir ou fechar porta            |
+| POST, DELETE       | `/campaigns/:id/scenes/:sceneId/explored`           | Somar áreas vistas e esquecer    |
+| GET                | `/health`                                           | Saúde da API e do banco          |
 
 | Evento (Socket.IO)                 | Direção            | O que faz                                      |
 | ---------------------------------- | ------------------ | ---------------------------------------------- |
@@ -218,6 +229,7 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | `roll:new`                         | servidor → cliente | Rolagem nova, só para quem pode ver            |
 | `scene:list`, `scene:active`       | servidor → cliente | Cenas mudaram ou outra foi aberta              |
 | `scene:item`, `scene:item:removed` | servidor → cliente | Item colocado, mexido ou apagado               |
+| `scene:explored`                   | servidor → cliente | O grupo viu uma parte nova da cena             |
 
 ## Deploy
 
