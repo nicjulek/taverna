@@ -189,7 +189,8 @@ async function seed(): Promise<void> {
     .values([
       ...mineWalls().map((points) => wall(points)),
       wall([560, 385, 560, 525], { type: 'door', state: 'closed' }),
-      wall([980, 175, 980, 315], { type: 'door', state: 'locked' })
+      wall([1015, 175, 1015, 385], { type: 'door', state: 'locked' }),
+      wall([1015, 385, 1155, 385])
     ])
   const at = (col: number, row: number, span = 1) => ({ x: col * cell, y: row * cell, width: cell * span, height: cell * span })
   await db.insert(schema.sceneItems).values([
