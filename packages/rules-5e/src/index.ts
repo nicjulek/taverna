@@ -4,6 +4,8 @@ import { criticalDamage, d20, judgeAttack, judgeCheck } from './combat'
 
 export * from './abilities'
 export * from './combat'
+export * from './conditions'
+export * from './damage'
 export * from './hit-points'
 export * from './proficiency'
 export * from './spellcasting'
