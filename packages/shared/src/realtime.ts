@@ -1,3 +1,4 @@
+import type { CombatUpdate } from './combat'
 import type { RollDto } from './rolls'
 import type { SceneItemDto } from './scenes'
 
@@ -19,6 +20,7 @@ export interface ServerToClientEvents {
   'scene:item': (payload: { campaignId: string; sceneId: string; item: SceneItemDto }) => void
   'scene:item:removed': (payload: { campaignId: string; sceneId: string; id: string }) => void
   'scene:explored': (payload: { campaignId: string; sceneId: string; explored: string | null }) => void
+  'combat:update': (payload: CombatUpdate) => void
 }
 
 export interface ClientToServerEvents {
