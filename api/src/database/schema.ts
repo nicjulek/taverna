@@ -225,6 +225,41 @@ export const rolls = pgTable(
   (table) => [index('rolls_campaign_created_idx').on(table.campaignId, table.createdAt)]
 )
 
+export const combats = pgTable(
+  'combats',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    sceneId: uuid('scene_id')
+      .notNull()
+      .references(() => scenes.id, { onDelete: 'cascade' }),
+    round: integer('round').notNull().default(0),
+    turnId: uuid('turn_id'),
+    createdAt: createdAt()
+  },
+  (table) => [uniqueIndex('combats_campaign_idx').on(table.campaignId)]
+)
+
+export const combatants = pgTable(
+  'combatants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    combatId: uuid('combat_id')
+      .notNull()
+      .references(() => combats.id, { onDelete: 'cascade' }),
+    tokenId: uuid('token_id').references(() => sceneItems.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    initiative: integer('initiative'),
+    bonus: integer('bonus').notNull().default(0),
+    hidden: boolean('hidden').notNull().default(false),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt()
+  },
+  (table) => [index('combatants_combat_idx').on(table.combatId)]
+)
+
 export const usersRelations = relations(users, ({ many }) => ({
   memberships: many(campaignMembers)
 }))
