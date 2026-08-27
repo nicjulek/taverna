@@ -4,6 +4,7 @@ import { ScenesService } from './scenes.service'
 
 @Module({
   controllers: [ScenesController],
-  providers: [ScenesService]
+  providers: [ScenesService],
+  exports: [ScenesService]
 })
 export class ScenesModule {}

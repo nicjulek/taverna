@@ -4,6 +4,7 @@ import { RollsService } from './rolls.service'
 
 @Module({
   controllers: [RollsController],
-  providers: [RollsService]
+  providers: [RollsService],
+  exports: [RollsService]
 })
 export class RollsModule {}

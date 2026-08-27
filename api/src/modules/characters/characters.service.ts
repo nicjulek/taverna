@@ -17,6 +17,7 @@ import { Database, DB } from '../../database/database.module'
 import { campaignMembers, characters, users } from '../../database/schema'
 import { CampaignAccessService } from '../campaigns/campaign-access.service'
 import { RealtimeService } from '../realtime/realtime.service'
+import { ScenesService } from '../scenes/scenes.service'
 
 type CharacterRow = typeof characters.$inferSelect & { ownerName: string | null; ownerColor: string | null }
 
@@ -25,7 +26,8 @@ export class CharactersService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly access: CampaignAccessService,
-    private readonly realtime: RealtimeService
+    private readonly realtime: RealtimeService,
+    private readonly scenes: ScenesService
   ) {}
 
   async list(campaignId: string, userId: string): Promise<CharacterSummaryDto[]> {
@@ -75,6 +77,7 @@ export class CharactersService {
       .returning({ id: characters.id })
     if (updated.length === 0) throw new ConflictException('A ficha mudou em outra tela. Recarregamos a versão nova.')
     this.realtime.changed(campaignId, 'characters', id)
+    if (changes.sheet) await this.scenes.syncCharacterTokens(campaignId, id, changes.sheet)
     return this.get(campaignId, id, userId)
   }
 

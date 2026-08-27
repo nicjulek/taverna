@@ -1,6 +1,20 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import {
+  adjustDamage,
+  applyDamage,
+  applyHealing,
+  concentrationDc,
+  damageTypeOf,
+  type Defenses,
+  grantTemporary,
+  readEffects,
+  type Sheet5e,
+  tickEffects
+} from '@taverna/rules-5e'
+import {
   type CreateSceneInput,
+  type HpChangeInput,
+  type HpChangeResult,
   DEFAULT_SCENE_SETTINGS,
   isGameMaster,
   PLAYER_ITEM_KINDS,
@@ -10,13 +24,14 @@ import {
   type SceneItemDto,
   type SceneItemValues,
   type SceneWithItemsDto,
+  type TokenHp,
   type UpdateSceneInput,
   type UpdateSceneItemInput
 } from '@taverna/shared'
 import { decodeBits, doorState, encodeBits, exploredDims, pathBlocked, setBits, wallSegments, wallType } from '@taverna/tabletop'
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { Database, DB } from '../../database/database.module'
-import { campaignMembers, sceneItems, scenes } from '../../database/schema'
+import { campaignMembers, characters, sceneItems, scenes } from '../../database/schema'
 import { CampaignAccessService } from '../campaigns/campaign-access.service'
 import { RealtimeService } from '../realtime/realtime.service'
 
@@ -142,6 +157,7 @@ export class ScenesService {
       .insert(sceneItems)
       .values({
         ...input,
+        data: input.kind === 'token' ? await this.withVitals(campaignId, input.data ?? {}) : input.data,
         z: input.z ?? max + 1,
         ownerId: gm ? (input.ownerId ?? null) : userId,
         createdBy: userId,
@@ -170,9 +186,139 @@ export class ScenesService {
         throw new ForbiddenException('Só os mestres mudam camada, trava e dono')
       if (item.kind === 'token' && (input.x !== undefined || input.y !== undefined)) await this.checkPath(sceneId, item, input)
     }
-    const [row] = await this.db.update(sceneItems).set(input).where(eq(sceneItems.id, itemId)).returning()
+    const changes = item.kind === 'token' && input.data ? { ...input, data: await this.withVitals(campaignId, input.data) } : input
+    const [row] = await this.db.update(sceneItems).set(changes).where(eq(sceneItems.id, itemId)).returning()
     await this.publish(campaignId, scene, row!, item.layer)
     return this.toItem(row!)
+  }
+
+  async changeHp(campaignId: string, sceneId: string, itemId: string, userId: string, input: HpChangeInput): Promise<HpChangeResult> {
+    const role = await this.access.requireMember(campaignId, userId)
+    const scene = await this.find(campaignId, sceneId, role)
+    const item = await this.findItem(sceneId, itemId, role)
+    if (item.kind !== 'token') throw new BadRequestException('Só tokens têm pontos de vida')
+    const characterId = typeof item.data.characterId === 'string' ? item.data.characterId : null
+    const character = characterId ? await this.character(campaignId, characterId) : null
+    const before = character ? character.sheet.hp : readHp(item.data.hp)
+    if (!before) throw new BadRequestException('Este token ainda não tem pontos de vida')
+    let amount = input.amount
+    let adjustment: HpChangeResult['adjustment'] = 'normal'
+    let hp: TokenHp
+    let droppedToZero = false
+    if (input.change === 'damage') {
+      const adjusted = adjustDamage(input.amount, damageTypeOf(input.type), readDefenses(item.data.defenses))
+      amount = adjusted.amount
+      adjustment = adjusted.adjustment
+      const result = applyDamage(before, amount)
+      hp = { current: result.current, max: result.max, temporary: result.temporary }
+      droppedToZero = result.droppedToZero
+    } else if (input.change === 'healing') hp = applyHealing(before, input.amount)
+    else hp = grantTemporary(before, input.amount)
+    if (character) {
+      await this.db
+        .update(characters)
+        .set({ sheet: { ...character.sheet, hp }, version: character.version + 1 })
+        .where(eq(characters.id, character.id))
+      this.realtime.changed(campaignId, 'characters', character.id)
+      await this.syncCharacterTokens(campaignId, character.id, { ...character.sheet, hp })
+    } else {
+      const [row] = await this.db
+        .update(sceneItems)
+        .set({ data: { ...item.data, hp } })
+        .where(eq(sceneItems.id, itemId))
+        .returning()
+      await this.publish(campaignId, scene, row!)
+    }
+    const concentrating = readEffects(item.data.effects).some((e) => e.condition === 'concentrating')
+    return {
+      hp,
+      amount,
+      adjustment,
+      droppedToZero,
+      concentrationDc: input.change === 'damage' && concentrating && amount > 0 && hp.current > 0 ? concentrationDc(amount) : null
+    }
+  }
+
+  async syncCharacterTokens(campaignId: string, characterId: string, sheet: Sheet5e): Promise<void> {
+    const rows = await this.db
+      .select({ item: sceneItems, scene: scenes })
+      .from(sceneItems)
+      .innerJoin(scenes, eq(scenes.id, sceneItems.sceneId))
+      .where(and(eq(scenes.campaignId, campaignId), eq(sceneItems.kind, 'token'), sql`${sceneItems.data}->>'characterId' = ${characterId}`))
+    for (const { item, scene } of rows) {
+      const hp = sheet.hp
+      const current = readHp(item.data.hp)
+      if (
+        current &&
+        current.current === hp.current &&
+        current.max === hp.max &&
+        current.temporary === hp.temporary &&
+        item.data.ac === sheet.armorClass
+      )
+        continue
+      const [row] = await this.db
+        .update(sceneItems)
+        .set({ data: { ...item.data, hp, ac: sheet.armorClass } })
+        .where(eq(sceneItems.id, item.id))
+        .returning()
+      await this.publish(campaignId, scene, row!)
+    }
+  }
+
+  async tickToken(campaignId: string, tokenId: string): Promise<string[]> {
+    const [found] = await this.db
+      .select({ item: sceneItems, scene: scenes })
+      .from(sceneItems)
+      .innerJoin(scenes, eq(scenes.id, sceneItems.sceneId))
+      .where(and(eq(sceneItems.id, tokenId), eq(scenes.campaignId, campaignId)))
+    if (!found) return []
+    const effects = readEffects(found.item.data.effects)
+    if (!effects.some((e) => e.rounds !== null)) return []
+    const { kept, ended } = tickEffects(effects)
+    const [row] = await this.db
+      .update(sceneItems)
+      .set({ data: { ...found.item.data, effects: kept } })
+      .where(eq(sceneItems.id, tokenId))
+      .returning()
+    await this.publish(campaignId, found.scene, row!)
+    return ended.map((e) => e.label)
+  }
+
+  async tokens(campaignId: string, sceneId: string, ids: string[]): Promise<ItemRow[]> {
+    if (ids.length === 0) return []
+    return this.db
+      .select({ item: sceneItems })
+      .from(sceneItems)
+      .innerJoin(scenes, eq(scenes.id, sceneItems.sceneId))
+      .where(
+        and(eq(scenes.campaignId, campaignId), eq(sceneItems.sceneId, sceneId), inArray(sceneItems.id, ids), eq(sceneItems.kind, 'token'))
+      )
+      .then((rows) => rows.map((r) => r.item))
+  }
+
+  async sceneTokens(campaignId: string, sceneId: string): Promise<ItemRow[]> {
+    const rows = await this.db
+      .select({ item: sceneItems })
+      .from(sceneItems)
+      .innerJoin(scenes, eq(scenes.id, sceneItems.sceneId))
+      .where(and(eq(scenes.campaignId, campaignId), eq(sceneItems.sceneId, sceneId), eq(sceneItems.kind, 'token')))
+    return rows.map((r) => r.item)
+  }
+
+  async character(campaignId: string, characterId: string) {
+    const [row] = await this.db
+      .select({ id: characters.id, sheet: characters.sheet, version: characters.version })
+      .from(characters)
+      .where(and(eq(characters.id, characterId), eq(characters.campaignId, campaignId)))
+    return row ?? null
+  }
+
+  private async withVitals(campaignId: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const characterId = typeof data.characterId === 'string' ? data.characterId : null
+    if (!characterId) return data
+    const character = await this.character(campaignId, characterId)
+    if (!character) return { ...data, characterId: null }
+    return { ...data, hp: character.sheet.hp, ac: character.sheet.armorClass }
   }
 
   async door(campaignId: string, sceneId: string, itemId: string, userId: string, state: 'open' | 'closed'): Promise<SceneItemDto> {
@@ -322,4 +468,26 @@ export class ScenesService {
       updatedAt: row.updatedAt.toISOString()
     }
   }
+}
+
+export function readHp(value: unknown): TokenHp | null {
+  if (!value || typeof value !== 'object') return null
+  const hp = value as Record<string, unknown>
+  const max = Number(hp.max)
+  if (!Number.isFinite(max) || max <= 0) return null
+  const current = Number(hp.current)
+  const temporary = Number(hp.temporary)
+  return {
+    max: Math.floor(max),
+    current: Number.isFinite(current) ? Math.max(0, Math.min(Math.floor(max), Math.floor(current))) : Math.floor(max),
+    temporary: Number.isFinite(temporary) ? Math.max(0, Math.floor(temporary)) : 0
+  }
+}
+
+export function readDefenses(value: unknown): Partial<Defenses> {
+  if (!value || typeof value !== 'object') return {}
+  const raw = value as Record<string, unknown>
+  const list = (key: string) =>
+    Array.isArray(raw[key]) ? (raw[key] as unknown[]).map((v) => damageTypeOf(String(v))).filter((v) => v !== null) : []
+  return { resistances: list('resistances'), immunities: list('immunities'), vulnerabilities: list('vulnerabilities') }
 }

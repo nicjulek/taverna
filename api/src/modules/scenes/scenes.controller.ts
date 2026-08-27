@@ -3,6 +3,9 @@ import {
   type CreateSceneInput,
   createSceneSchema,
   doorSchema,
+  type HpChangeInput,
+  type HpChangeResult,
+  hpChangeSchema,
   exploredSchema,
   type SceneDto,
   type SceneItemDto,
@@ -157,5 +160,17 @@ export class ScenesController {
     @Param('sceneId', UuidPipe) sceneId: string
   ): Promise<void> {
     return this.scenes.resetExplored(campaignId, sceneId, user.id)
+  }
+
+  @Post(':sceneId/items/:itemId/hp')
+  @HttpCode(200)
+  changeHp(
+    @CurrentUser() user: AuthUser,
+    @Param('campaignId', UuidPipe) campaignId: string,
+    @Param('sceneId', UuidPipe) sceneId: string,
+    @Param('itemId', UuidPipe) itemId: string,
+    @Body(new ZodPipe(hpChangeSchema)) body: HpChangeInput
+  ): Promise<HpChangeResult> {
+    return this.scenes.changeHp(campaignId, sceneId, itemId, user.id, body)
   }
 }
