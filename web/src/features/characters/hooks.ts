@@ -10,10 +10,11 @@ export function useCharacters(campaignId: string) {
   })
 }
 
-export function useCharacter(campaignId: string, id: string) {
+export function useCharacter(campaignId: string, id: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.character(campaignId, id),
-    queryFn: () => api.get<CharacterDto>(`/campaigns/${campaignId}/characters/${id}`)
+    queryFn: () => api.get<CharacterDto>(`/campaigns/${campaignId}/characters/${id}`),
+    enabled
   })
 }
 

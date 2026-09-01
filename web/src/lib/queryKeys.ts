@@ -14,5 +14,6 @@ export const queryKeys = {
   activeScene: (campaignId: string) => ['campaigns', campaignId, 'scenes', 'active'] as const,
   assets: (campaignId: string) => ['campaigns', campaignId, 'assets'] as const,
   rolls: (campaignId: string) => ['campaigns', campaignId, 'rolls'] as const,
+  combat: (campaignId: string) => ['campaigns', campaignId, 'combat'] as const,
   invite: (code: string) => ['invite', code] as const
 }
