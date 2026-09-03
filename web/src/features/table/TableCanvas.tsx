@@ -23,6 +23,8 @@ import { Circle, Ellipse, Group, Image as KonvaImage, Label, Layer, Line, Rect, 
 import { canEdit, type DrawStyle, drawingItem, initials, lightItem, shapeItem, templateItem, type Tool, wallItem } from './items'
 import { texture } from './textures'
 import type { VisionState } from './vision'
+import { isBloodied, tokenAura, tokenEffects, tokenHp } from '../combat/stats'
+import { CONDITIONS } from '@taverna/rules-5e'
 
 export interface View {
   x: number
@@ -54,6 +56,9 @@ interface CanvasProps {
   lightPreset: LightPreset
   onDoor: (id: string, state: 'open' | 'closed') => void
   onBlocked: () => void
+  turnTokenId: string | null
+  targets: Set<string>
+  onTarget: (id: string) => void
 }
 
 const WALL_COLORS: Record<WallType, string> = { wall: '#e8bb5f', door: '#c58b3a', window: '#6fa8dc' }
@@ -108,14 +113,44 @@ function MediaNode({ item }: { item: SceneItemDto }) {
   return <KonvaImage ref={ref} image={media} width={item.width} height={item.height} />
 }
 
-function TokenNode({ item }: { item: SceneItemDto }) {
+export interface TokenView {
+  turn: boolean
+  target: boolean
+  showHp: boolean
+  cell: number
+}
+
+function hpColor(ratio: number) {
+  return ratio > 0.5 ? '#7fb487' : ratio > 0.25 ? '#d6a446' : '#e07a66'
+}
+
+function TokenNode({ item, view }: { item: SceneItemDto; view: TokenView }) {
   const name = String(item.data.name ?? '')
   const color = String(item.data.color ?? '#c58b3a')
   const assetId = typeof item.data.assetId === 'string' ? item.data.assetId : null
   const image = useMedia(assetId ? `/api/assets/${assetId}` : null, 'image')
   const r = Math.min(item.width, item.height) / 2
+  const hp = tokenHp(item)
+  const aura = tokenAura(item)
+  const effects = tokenEffects(item)
+  const down = hp !== null && hp.current === 0
   return (
     <>
+      {aura && (
+        <Circle
+          x={r}
+          y={r}
+          radius={r + aura.radius * view.cell}
+          fill={aura.color}
+          opacity={0.14}
+          stroke={aura.color}
+          strokeWidth={2}
+          listening={false}
+        />
+      )}
+      {view.turn && (
+        <Circle x={r} y={r} radius={r + 5} stroke="#e8bb5f" strokeWidth={4} shadowColor="#e8bb5f" shadowBlur={14} listening={false} />
+      )}
       <Circle x={r} y={r} radius={r - 2} fill={color} shadowColor="#000" shadowBlur={8} shadowOpacity={0.5} perfectDrawEnabled={false} />
       {image ? (
         <Group clipFunc={(ctx) => ctx.arc(r, r, r - 5, 0, Math.PI * 2)}>
@@ -135,6 +170,78 @@ function TokenNode({ item }: { item: SceneItemDto }) {
         />
       )}
       <Circle x={r} y={r} radius={r - 2} stroke="#ece4d4" strokeWidth={3} />
+      {down && (
+        <>
+          <Circle x={r} y={r} radius={r - 2} fill="#101a16" opacity={0.55} listening={false} />
+          <Line points={[r * 0.45, r * 0.45, r * 1.55, r * 1.55]} stroke="#e07a66" strokeWidth={5} lineCap="round" listening={false} />
+          <Line points={[r * 1.55, r * 0.45, r * 0.45, r * 1.55]} stroke="#e07a66" strokeWidth={5} lineCap="round" listening={false} />
+        </>
+      )}
+      {!view.showHp && hp && !down && isBloodied(item) && (
+        <Circle x={r} y={r} radius={r + 1} stroke="#c5523f" strokeWidth={3} dash={[6, 5]} listening={false} />
+      )}
+      {view.target && (
+        <Group listening={false}>
+          <Circle x={r} y={r} radius={r + 9} stroke="#e07a66" strokeWidth={3} dash={[10, 6]} />
+          {[0, 1, 2, 3].map((i) => {
+            const a = (i * Math.PI) / 2
+            return (
+              <Line
+                key={i}
+                points={[r + Math.cos(a) * (r + 4), r + Math.sin(a) * (r + 4), r + Math.cos(a) * (r + 16), r + Math.sin(a) * (r + 16)]}
+                stroke="#e07a66"
+                strokeWidth={4}
+                lineCap="round"
+              />
+            )
+          })}
+        </Group>
+      )}
+      {view.showHp && hp && (
+        <Group y={-12} listening={false}>
+          <Rect x={4} width={r * 2 - 8} height={7} cornerRadius={3} fill="#101a16" opacity={0.85} />
+          <Rect
+            x={4}
+            width={Math.max(0, (r * 2 - 8) * (hp.current / hp.max))}
+            height={7}
+            cornerRadius={3}
+            fill={hpColor(hp.current / hp.max)}
+          />
+          {hp.temporary > 0 && (
+            <Rect x={4} width={Math.min(r * 2 - 8, (r * 2 - 8) * (hp.temporary / hp.max))} height={3} cornerRadius={2} fill="#6fa8dc" />
+          )}
+        </Group>
+      )}
+      {effects.slice(0, 4).map((effect, i) => {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5
+        return (
+          <Group key={effect.id} x={r + Math.cos(a) * r} y={r + Math.sin(a) * r} listening={false}>
+            <Circle radius={11} fill={effect.condition ? '#5c2116' : '#2d4a6b'} stroke="#ece4d4" strokeWidth={1.5} />
+            <Text
+              text={effect.condition ? CONDITIONS[effect.condition].short : effect.label.slice(0, 2)}
+              x={-11}
+              y={-6}
+              width={22}
+              align="center"
+              fontFamily="Alegreya Sans"
+              fontStyle="bold"
+              fontSize={11}
+              fill="#ece4d4"
+            />
+          </Group>
+        )
+      })}
+      {effects.length > 4 && (
+        <Text
+          text={`+${effects.length - 4}`}
+          x={r * 2 - 6}
+          y={r}
+          fontFamily="Alegreya Sans"
+          fontSize={13}
+          fill="#ece4d4"
+          listening={false}
+        />
+      )}
       {name && (
         <Label x={r} y={r * 2 + 4}>
           <Tag fill="#101a16" opacity={0.85} cornerRadius={4} pointerDirection="up" pointerWidth={0} pointerHeight={0} />
@@ -161,7 +268,7 @@ function TemplateNode({ item, grid, scale }: { item: SceneItemDto; grid: Grid; s
   )
 }
 
-function ItemBody({ item, grid, scene }: { item: SceneItemDto; grid: Grid; scene: SceneWithItemsDto }) {
+function ItemBody({ item, grid, scene, token }: { item: SceneItemDto; grid: Grid; scene: SceneWithItemsDto; token: TokenView }) {
   const stroke = String(item.data.stroke ?? '#e07a66')
   const strokeWidth = Number(item.data.strokeWidth ?? 4)
   const fill = String(item.data.fill ?? '#00000000')
@@ -239,7 +346,7 @@ function ItemBody({ item, grid, scene }: { item: SceneItemDto; grid: Grid; scene
       )
     }
     case 'token':
-      return <TokenNode item={item} />
+      return <TokenNode item={item} view={token} />
     case 'template':
       return <TemplateNode item={item} grid={grid} scale={scene.settings.scale} />
     case 'wall': {
@@ -652,6 +759,8 @@ export function TableCanvas(props: CanvasProps) {
           event.cancelBubble = true
           onSelect(item.id)
         }}
+        onDblClick={() => item.kind === 'token' && props.onTarget(item.id)}
+        onDblTap={() => item.kind === 'token' && props.onTarget(item.id)}
         onDragEnd={(event) => {
           const node = event.target
           let next = { x: node.x(), y: node.y() }
@@ -687,7 +796,17 @@ export function TableCanvas(props: CanvasProps) {
         }}
       >
         <Group x={item.flipX ? item.width : 0} y={item.flipY ? item.height : 0} scaleX={item.flipX ? -1 : 1} scaleY={item.flipY ? -1 : 1}>
-          <ItemBody item={item} grid={grid} scene={scene} />
+          <ItemBody
+            item={item}
+            grid={grid}
+            scene={scene}
+            token={{
+              turn: props.turnTokenId === item.id,
+              target: props.targets.has(item.id),
+              showHp: gm || item.ownerId !== null,
+              cell: grid.size
+            }}
+          />
         </Group>
       </Group>
     )
