@@ -21,6 +21,8 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
 import { canEdit } from './items'
 import { useDraftValue } from './useDraftValue'
+import { AttackPanel } from '../combat/AttackPanel'
+import { TokenCombat } from '../combat/TokenCombat'
 
 function ColorField({ label, value, onCommit }: { label: string; value: string; onCommit: (v: string) => void }) {
   const [draft, change] = useDraftValue(value, onCommit)
@@ -146,6 +148,8 @@ interface ItemInspectorProps {
   onRemove: () => void
   onCalibrate: () => void
   members: MemberDto[]
+  campaignId: string
+  target: SceneItemDto | null
 }
 
 const KIND_LABELS: Record<SceneItemDto['kind'], string> = {
@@ -163,7 +167,7 @@ const KIND_LABELS: Record<SceneItemDto['kind'], string> = {
   light: 'Luz'
 }
 
-export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalibrate, members }: ItemInspectorProps) {
+export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalibrate, members, campaignId, target }: ItemInspectorProps) {
   const editable = canEdit(item, gm, me)
   const grid = {
     type: scene.settings.grid.type,
@@ -197,6 +201,9 @@ export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalib
         )}
       </div>
       {!editable && <p className="text-sm text-moss">Só quem colocou ou o mestre mexe neste item.</p>}
+      {!editable && item.kind === 'token' && (
+        <TokenCombat campaignId={campaignId} scene={scene} item={item} gm={gm} editable={false} onData={setData} />
+      )}
 
       {editable && (
         <>
@@ -205,6 +212,18 @@ export function ItemInspector({ item, scene, gm, me, onUpdate, onRemove, onCalib
               <TextField label="Nome do token" value={String(item.data.name ?? '')} maxLength={40} onCommit={(name) => setData({ name })} />
               <ColorField label="Cor" value={String(item.data.color ?? '#c58b3a')} onCommit={(color) => setData({ color })} />
             </Section>
+          )}
+          {item.kind === 'token' && (gm || item.ownerId === me) && (
+            <AttackPanel
+              campaignId={campaignId}
+              scene={scene}
+              attacker={item}
+              target={target && target.id !== item.id ? target : null}
+              gm={gm}
+            />
+          )}
+          {item.kind === 'token' && (
+            <TokenCombat campaignId={campaignId} scene={scene} item={item} gm={gm} editable={editable} onData={setData} />
           )}
           {item.kind === 'token' && (
             <Section title="Visão e luz">
