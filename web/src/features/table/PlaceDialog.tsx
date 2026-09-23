@@ -1,6 +1,50 @@
 import type { CharacterSummaryDto } from '@taverna/shared'
-import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { Button, Dialog, DialogContent, Field, Input, Select } from '@/components/ui'
+import { useCompendiumSearch } from '../compendium/hooks'
+
+const SPAN_BY_SIZE: Record<string, number> = { Large: 2, Huge: 3, Gargantuan: 4 }
+
+function MonsterPicker({
+  campaignId,
+  onPick
+}: {
+  campaignId: string
+  onPick: (monster: { id: string; name: string; span: number }) => void
+}) {
+  const [q, setQ] = useState('')
+  const deferred = useDeferredValue(q.trim())
+  const search = useCompendiumSearch(campaignId, { kind: 'monster', q: deferred || undefined })
+  const results = deferred.length >= 2 ? (search.data?.pages[0]?.items ?? []).slice(0, 6) : []
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex flex-col gap-1 text-sm text-moss">
+        Criatura do compêndio
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Goblin, esqueleto, lobo…" />
+      </label>
+      {results.length > 0 && (
+        <ul className="flex flex-col gap-1" aria-label="Criaturas encontradas">
+          {results.map((monster) => (
+            <li key={monster.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  onPick({ id: monster.id, name: monster.name, span: SPAN_BY_SIZE[String(monster.meta.size ?? '')] ?? 1 })
+                  setQ('')
+                }}
+                className="flex w-full justify-between rounded-control px-2 py-1.5 text-left text-sm hover:bg-surface-raised"
+              >
+                <span>{monster.name}</span>
+                <span className="text-moss-dim">ND {String(monster.meta.crLabel ?? monster.meta.cr ?? '?')}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 export type PlaceKind = 'text' | 'token' | 'marker'
 
@@ -9,12 +53,15 @@ export interface PlaceValues {
   color: string
   span: number
   characterId: string | null
+  compendiumId: string | null
 }
 
 const TITLES: Record<PlaceKind, string> = { text: 'Escrever na mesa', token: 'Novo token', marker: 'Novo marcador' }
 const NONE = '__nenhum'
 
 interface PlaceDialogProps {
+  campaignId: string
+  gm: boolean
   kind: PlaceKind | null
   characters: CharacterSummaryDto[]
   color: string
@@ -22,10 +69,17 @@ interface PlaceDialogProps {
   onConfirm: (values: PlaceValues) => void
 }
 
-export function PlaceDialog({ kind, characters, color, onCancel, onConfirm }: PlaceDialogProps) {
-  const [values, setValues] = useState<PlaceValues>({ text: '', color, span: 1, characterId: null })
+export function PlaceDialog({ campaignId, gm, kind, characters, color, onCancel, onConfirm }: PlaceDialogProps) {
+  const [values, setValues] = useState<PlaceValues>({ text: '', color, span: 1, characterId: null, compendiumId: null })
   useEffect(() => {
-    if (kind) setValues({ text: kind === 'marker' ? 'A' : '', color: kind === 'token' ? '#c58b3a' : color, span: 1, characterId: null })
+    if (kind)
+      setValues({
+        text: kind === 'marker' ? 'A' : '',
+        color: kind === 'token' ? '#c58b3a' : color,
+        span: 1,
+        characterId: null,
+        compendiumId: null
+      })
   }, [kind, color])
   const label = kind === 'text' ? 'Texto' : kind === 'token' ? 'Nome do token' : 'Rótulo (até 2 letras aparecem no mapa)'
 
@@ -54,6 +108,29 @@ export function PlaceDialog({ kind, characters, color, onCancel, onConfirm }: Pl
               }}
               options={[{ value: NONE, label: 'Nenhuma (criatura avulsa)' }, ...characters.map((c) => ({ value: c.id, label: c.name }))]}
             />
+          )}
+          {kind === 'token' && gm && !values.characterId && !values.compendiumId && (
+            <MonsterPicker
+              campaignId={campaignId}
+              onPick={(monster) =>
+                setValues((v) => ({ ...v, compendiumId: monster.id, text: monster.name, span: monster.span, color: '#8a3b2a' }))
+              }
+            />
+          )}
+          {values.compendiumId && (
+            <p className="flex items-center justify-between rounded-control bg-surface-raised px-3 py-2 text-sm">
+              <span>Com PV, CA, ataques e defesas do compêndio</span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-7"
+                aria-label="Não usar o compêndio"
+                onClick={() => setValues((v) => ({ ...v, compendiumId: null }))}
+              >
+                <X />
+              </Button>
+            </p>
           )}
           <Field label={label}>
             {(props) => (
