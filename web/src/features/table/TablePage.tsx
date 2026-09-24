@@ -1,6 +1,6 @@
 import { isGameMaster, type AssetDto, type LightPreset, type SceneItemDto, type SceneItemInput, type SceneLayer } from '@taverna/shared'
 import { calibrate, type Point, type TemplateKind, type WallType } from '@taverna/tabletop'
-import { Map as MapIcon, Maximize } from 'lucide-react'
+import { Crosshair, Map as MapIcon, Maximize } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, EmptyState, Skeleton } from '@/components/ui'
@@ -18,6 +18,11 @@ import { ScenesPanel } from './ScenesPanel'
 import { TableCanvas, type View } from './TableCanvas'
 import { Toolbar } from './Toolbar'
 import { useVision } from './vision'
+import { CombatTracker } from '../combat/CombatTracker'
+import { useCombat, useCombatFeed } from '../combat/hooks'
+import { monsterToken } from '../combat/stats'
+import { compendiumEntryQuery } from '../compendium/hooks'
+import { useQueryClient } from '@tanstack/react-query'
 
 const ALL_VISIBLE: Record<SceneLayer, boolean> = { map: true, objects: true, tokens: true, gm: true }
 
@@ -59,6 +64,20 @@ export function TablePage() {
   const [wallType, setWallType] = useState<WallType>('wall')
   const [lightPreset, setLightPreset] = useState<LightPreset>('torch')
   const [preview, setPreview] = useState(false)
+  const [targets, setTargets] = useState<Set<string>>(() => new Set())
+  useCombatFeed(campaign.id)
+  const queryClient = useQueryClient()
+  const combat = useCombat(campaign.id)
+  const toggleTarget = useCallback(
+    (id: string) =>
+      setTargets((current) => {
+        const next = new Set(current)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      }),
+    []
+  )
   const wrapper = useRef<HTMLDivElement>(null)
   const vision = useVision(sceneQuery.data ?? null, gm, me, preview)
   const exploreMutate = mutations.explore.mutate
@@ -153,10 +172,17 @@ export function TablePage() {
     const { kind, at } = placing
     setPlacing(null)
     if (kind === 'token') {
-      create({
-        ...tokenItem(at, grid, { name: values.text, color: values.color, span: values.span, characterId: values.characterId }),
-        ownerId: characters.data?.find((c) => c.id === values.characterId)?.ownerId ?? null
-      })
+      const base = tokenItem(at, grid, { name: values.text, color: values.color, span: values.span, characterId: values.characterId })
+      const ownerId = characters.data?.find((c) => c.id === values.characterId)?.ownerId ?? null
+      if (values.compendiumId) {
+        void queryClient
+          .fetchQuery(compendiumEntryQuery(campaign.id, values.compendiumId))
+          .then((entry) => {
+            const monster = monsterToken(entry)
+            create({ ...base, ownerId, data: { ...base.data, ...monster.data } })
+          })
+          .catch(() => toast.error('Não deu para ler a criatura do compêndio'))
+      } else create({ ...base, ownerId })
     } else if (kind === 'marker') {
       const size = Math.round(grid.size * 0.8)
       create({
@@ -317,6 +343,11 @@ export function TablePage() {
             lightPreset={lightPreset}
             onDoor={(id, state) => mutations.door.mutate({ sceneId: scene.id, id, state }, { onError: fail })}
             onBlocked={() => toast.error('Uma parede bloqueia o caminho')}
+            turnTokenId={
+              combat.data?.sceneId === scene.id ? (combat.data.combatants.find((c) => c.id === combat.data!.turnId)?.tokenId ?? null) : null
+            }
+            targets={targets}
+            onTarget={toggleTarget}
             onDropFiles={async (files, at) => {
               const sent = await upload.run(files)
               for (const [index, asset] of sent.entries())
@@ -344,6 +375,17 @@ export function TablePage() {
       </section>
 
       <aside className="flex flex-col gap-4 rounded-panel border border-line bg-surface/60 p-4 max-xl:order-3" aria-label="Detalhes">
+        <CombatTracker
+          campaignId={campaign.id}
+          scene={scene}
+          gm={gm}
+          me={me}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setTool('select')
+            setSelectedId(id)
+          }}
+        />
         {selected ? (
           <ItemInspector
             item={selected}
@@ -353,6 +395,8 @@ export function TablePage() {
             onUpdate={(patch) => update(selected.id, patch)}
             onRemove={() => remove(selected.id)}
             members={campaign.memberList}
+            campaignId={campaign.id}
+            target={scene.items.find((i) => targets.has(i.id) && i.id !== selected.id) ?? null}
             onCalibrate={() => {
               setTool('calibrate')
               toast('Arraste sobre uma célula da grade desenhada no mapa.')
@@ -378,7 +422,7 @@ export function TablePage() {
           ) : (
             <ul className="flex flex-col gap-1">
               {tokens.map((token) => (
-                <li key={token.id}>
+                <li key={token.id} className="flex items-center gap-1">
                   <button
                     type="button"
                     aria-pressed={token.id === selectedId}
@@ -387,13 +431,26 @@ export function TablePage() {
                       setSelectedId(token.id)
                     }}
                     className={cn(
-                      'flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm hover:bg-surface-raised',
+                      'flex min-w-0 flex-1 items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm hover:bg-surface-raised',
                       token.id === selectedId && 'bg-surface-raised'
                     )}
                   >
                     <span className="size-3 rounded-full" style={{ background: String(token.data.color ?? '#c58b3a') }} aria-hidden />
                     {String(token.data.name ?? 'Token')}
                     {token.layer === 'gm' && <span className="text-moss-dim">(oculto)</span>}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={targets.has(token.id)}
+                    aria-label={`Mirar em ${String(token.data.name ?? 'Token')}`}
+                    title="Marcar como alvo"
+                    onClick={() => toggleTarget(token.id)}
+                    className={cn(
+                      'grid size-8 shrink-0 place-items-center rounded-control text-moss-dim hover:text-bone',
+                      targets.has(token.id) && 'text-[#e07a66]'
+                    )}
+                  >
+                    <Crosshair className="size-4" aria-hidden />
                   </button>
                 </li>
               ))}
@@ -414,6 +471,8 @@ export function TablePage() {
         />
       )}
       <PlaceDialog
+        campaignId={campaign.id}
+        gm={gm}
         kind={placing?.kind ?? null}
         characters={characters.data ?? []}
         color={style.stroke}
