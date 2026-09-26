@@ -2,7 +2,7 @@ import { roll } from '@taverna/dice'
 import { newSheet, type Sheet5e } from '@taverna/rules-5e'
 import bcrypt from 'bcryptjs'
 import { DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { newInviteCode } from '../modules/campaigns/campaigns.service'
@@ -164,6 +164,20 @@ async function seed(): Promise<void> {
     ])
     .returning()
   const cell = MINE_MAP.cell
+  const [koboldEntry] = await db
+    .select()
+    .from(schema.compendiumEntries)
+    .where(and(eq(schema.compendiumEntries.kind, 'monster'), eq(schema.compendiumEntries.name, 'Kobold')))
+  const kobold = (name: string, hp: number) => ({
+    name,
+    color: name === 'Kobold' ? '#8a3b2a' : '#5c2116',
+    span: 1,
+    compendiumId: koboldEntry?.id ?? null,
+    hp: { current: hp, max: hp, temporary: 0 },
+    ac: 12,
+    initiative: 2,
+    defenses: { resistances: [], immunities: [], vulnerabilities: [] }
+  })
   const origin = { x: 5 * cell, y: 2 * cell }
   const wall = (points: number[], data: Record<string, unknown> = { type: 'wall' }) => {
     const xs = points.filter((_, i) => i % 2 === 0)
@@ -251,7 +265,15 @@ async function seed(): Promise<void> {
       z: 3,
       ownerId: ana.id,
       createdBy: gm.id,
-      data: { name: 'Lia Pés-Leves', color: ana.color, span: 1, characterId: liaRow!.id, light: { preset: 'torch', bright: 4, dim: 8 } }
+      data: {
+        name: 'Lia Pés-Leves',
+        color: ana.color,
+        span: 1,
+        characterId: liaRow!.id,
+        light: { preset: 'torch', bright: 4, dim: 8 },
+        hp: lia.hp,
+        ac: lia.armorClass
+      }
     },
     {
       sceneId: mine!.id,
@@ -261,7 +283,15 @@ async function seed(): Promise<void> {
       z: 4,
       ownerId: bruno.id,
       createdBy: gm.id,
-      data: { name: 'Doran Martelo-de-Brasa', color: bruno.color, span: 1, characterId: doranRow!.id, darkvision: 12 }
+      data: {
+        name: 'Doran Martelo-de-Brasa',
+        color: bruno.color,
+        span: 1,
+        characterId: doranRow!.id,
+        darkvision: 12,
+        hp: doran.hp,
+        ac: doran.armorClass
+      }
     },
     {
       sceneId: mine!.id,
@@ -270,7 +300,7 @@ async function seed(): Promise<void> {
       ...at(15, 8),
       z: 5,
       createdBy: gm.id,
-      data: { name: 'Kobold', color: '#8a3b2a', span: 1 }
+      data: kobold('Kobold', 5)
     },
     {
       sceneId: mine!.id,
@@ -279,7 +309,7 @@ async function seed(): Promise<void> {
       ...at(17, 9),
       z: 6,
       createdBy: gm.id,
-      data: { name: 'Kobold', color: '#8a3b2a', span: 1 }
+      data: kobold('Kobold', 5)
     },
     {
       sceneId: mine!.id,
@@ -288,7 +318,7 @@ async function seed(): Promise<void> {
       ...at(21, 4),
       z: 7,
       createdBy: gm.id,
-      data: { name: 'Chefe kobold', color: '#5c2116', span: 1 }
+      data: { ...kobold('Chefe kobold', 12), ac: 14, effects: [{ id: 'furia', label: 'Fúria', condition: null, rounds: 10 }] }
     },
     {
       sceneId: mine!.id,
