@@ -33,10 +33,10 @@ test('mestre monta a cena e o jogador só vê o que é dele', async ({ browser }
   await gm.getByRole('button', { name: 'Token', exact: true }).click()
   const canvas = gm.locator('.konvajs-content')
   await canvas.click({ position: { x: 300, y: 260 } })
-  await gm.getByLabel('Nome do token').fill('Afogado')
+  await gm.getByRole('dialog').getByLabel('Nome do token').fill('Afogado')
   await gm.getByRole('button', { name: 'Colocar' }).click()
   const tokens = gm.getByRole('region', { name: 'Tokens na cena' })
-  await expect(tokens.getByRole('button', { name: 'Afogado' })).toBeVisible()
+  await expect(tokens.getByRole('button', { name: 'Afogado', exact: true })).toBeVisible()
   await gm.getByRole('combobox', { name: 'Camada do item' }).click()
   await gm.getByRole('option', { name: /^Mestre/ }).click()
   await expect(tokens.getByText('(oculto)')).toBeVisible()
@@ -57,11 +57,11 @@ test('mestre monta a cena e o jogador só vê o que é dele', async ({ browser }
 
   await gm
     .getByRole('region', { name: 'Tokens na cena' })
-    .getByRole('button', { name: /Afogado/ })
+    .getByRole('button', { name: /^Afogado/ })
     .click()
   await gm.getByRole('combobox', { name: 'Camada do item' }).click()
   await gm.getByRole('option', { name: 'Tokens', exact: true }).click()
-  await expect(playerTokens.getByRole('button', { name: 'Afogado' })).toBeVisible()
+  await expect(playerTokens.getByRole('button', { name: 'Afogado', exact: true })).toBeVisible()
 
   await gm.getByRole('button', { name: 'Nova cena' }).click()
   await gm.getByLabel('Nome da cena').fill('Telhado')
