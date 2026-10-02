@@ -1,12 +1,13 @@
 import type { RollResult } from '@taverna/dice'
 import { z } from 'zod'
 
-export const ROLL_VISIBILITIES = ['public', 'gm', 'self'] as const
+export const ROLL_VISIBILITIES = ['public', 'gm', 'blind', 'self'] as const
 export type RollVisibility = (typeof ROLL_VISIBILITIES)[number]
 
 export const ROLL_VISIBILITY_LABELS: Record<RollVisibility, string> = {
   public: 'Todos veem',
-  gm: 'Só os mestres',
+  gm: 'Eu e os mestres',
+  blind: 'Às cegas, só os mestres',
   self: 'Só eu'
 }
 
@@ -27,6 +28,7 @@ export interface RollDto {
   label: string
   visibility: RollVisibility
   result: RollResult
+  hidden?: boolean
   createdAt: string
 }
 

@@ -200,8 +200,16 @@ export const ASSET_TYPES = {
   'image/gif': 'GIF',
   'image/svg+xml': 'SVG',
   'video/webm': 'WebM',
-  'video/mp4': 'MP4'
+  'video/mp4': 'MP4',
+  'audio/mpeg': 'MP3',
+  'audio/ogg': 'OGG',
+  'audio/wav': 'WAV',
+  'audio/flac': 'FLAC',
+  'audio/mp4': 'M4A'
 } as const
+
+export const isAudio = (mime: string) => mime.startsWith('audio/')
+export const isVisual = (mime: string) => mime.startsWith('image/') || mime.startsWith('video/')
 
 export type AssetMime = keyof typeof ASSET_TYPES
 
