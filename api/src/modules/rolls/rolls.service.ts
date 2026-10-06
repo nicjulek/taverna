@@ -41,14 +41,25 @@ export class RollsService {
       createdAt: row!.createdAt.toISOString()
     }
     if (visibility === 'public') this.realtime.roll(dto)
-    else this.realtime.roll(dto, await this.audience(campaignId, userId, visibility))
+    else if (visibility === 'blind') {
+      const masters = await this.masters(campaignId)
+      this.realtime.roll(dto, masters)
+      if (!masters.includes(userId)) this.realtime.roll(redact(dto), [userId])
+    } else this.realtime.roll(dto, await this.audience(campaignId, userId, visibility))
     return dto
+  }
+
+  async createFor(campaignId: string, userId: string, input: CreateRollInput): Promise<RollDto> {
+    const dto = await this.create(campaignId, userId, input)
+    if (dto.visibility !== 'blind') return dto
+    const role = await this.access.requireMember(campaignId, userId)
+    return isGameMaster(role) ? dto : redact(dto)
   }
 
   async list(campaignId: string, userId: string, before?: Date): Promise<RollDto[]> {
     const role = await this.access.requireMember(campaignId, userId)
     const visible: SQL[] = [eq(rolls.visibility, 'public'), eq(rolls.userId, userId)]
-    if (isGameMaster(role)) visible.push(eq(rolls.visibility, 'gm'))
+    if (isGameMaster(role)) visible.push(eq(rolls.visibility, 'gm'), eq(rolls.visibility, 'blind'))
     const rows = await this.db
       .select({
         id: rolls.id,
@@ -65,15 +76,39 @@ export class RollsService {
       .where(and(eq(rolls.campaignId, campaignId), or(...visible), before ? lt(rolls.createdAt, before) : undefined))
       .orderBy(desc(rolls.createdAt))
       .limit(ROLL_PAGE_SIZE)
-    return rows.map((row) => ({ ...row, campaignId, createdAt: row.createdAt.toISOString() }))
+    return rows.map((row) => {
+      const dto = { ...row, campaignId, createdAt: row.createdAt.toISOString() }
+      return dto.visibility === 'blind' && !isGameMaster(role) ? redact(dto) : dto
+    })
   }
 
   private async audience(campaignId: string, userId: string, visibility: RollVisibility): Promise<string[]> {
     if (visibility === 'self') return [userId]
-    const masters = await this.db
+    return [...new Set([userId, ...(await this.masters(campaignId))])]
+  }
+
+  private async masters(campaignId: string): Promise<string[]> {
+    const rows = await this.db
       .select({ userId: campaignMembers.userId })
       .from(campaignMembers)
       .where(and(eq(campaignMembers.campaignId, campaignId), inArray(campaignMembers.role, ['gm', 'cogm'])))
-    return [...new Set([userId, ...masters.map((m) => m.userId)])]
+    return rows.map((m) => m.userId)
+  }
+}
+
+export function redact(dto: RollDto): RollDto {
+  const { expression } = dto.result
+  return {
+    ...dto,
+    hidden: true,
+    result: {
+      expression,
+      label: dto.label,
+      total: 0,
+      terms: [],
+      segments: [{ kind: 'text', text: expression }],
+      natural: null,
+      critical: null
+    }
   }
 }

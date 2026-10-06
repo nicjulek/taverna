@@ -26,6 +26,6 @@ export class RollsController {
     @Param('campaignId', UuidPipe) campaignId: string,
     @Body(new ZodPipe(createRollSchema)) body: CreateRollInput
   ): Promise<RollDto> {
-    return this.rolls.create(campaignId, user.id, body)
+    return this.rolls.createFor(campaignId, user.id, body)
   }
 }
