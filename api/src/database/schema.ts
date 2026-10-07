@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import type { RollResult } from '@taverna/dice'
 import type { Sheet5e } from '@taverna/rules-5e'
 import {
@@ -19,6 +19,8 @@ import type {
   AccessLevel,
   AssetMime,
   CompendiumKind,
+  HandoutKind,
+  MessageAudience,
   Role,
   RollVisibility,
   RuleSystemId,
@@ -259,6 +261,57 @@ export const combatants = pgTable(
   },
   (table) => [index('combatants_combat_idx').on(table.combatId)]
 )
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    audience: text('audience').$type<MessageAudience>().notNull().default('all'),
+    recipients: jsonb('recipients').$type<string[]>().notNull().default([]),
+    createdAt: createdAt()
+  },
+  (table) => [index('messages_campaign_created_idx').on(table.campaignId, table.createdAt)]
+)
+
+export const handouts = pgTable(
+  'handouts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    kind: text('kind').$type<HandoutKind>().notNull().default('letter'),
+    body: text('body').notNull().default(''),
+    assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'set null' }),
+    sharedWith: jsonb('shared_with')
+      .$type<'all' | 'none' | string[]>()
+      .notNull()
+      .default(sql`'"none"'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index('handouts_campaign_idx').on(table.campaignId)]
+)
+
+export const jukebox = pgTable('jukebox', {
+  campaignId: uuid('campaign_id')
+    .primaryKey()
+    .references(() => campaigns.id, { onDelete: 'cascade' }),
+  assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  playing: boolean('playing').notNull().default(false),
+  position: doublePrecision('position').notNull().default(0),
+  loop: boolean('loop').notNull().default(true),
+  volume: doublePrecision('volume').notNull().default(0.8),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+})
 
 export const usersRelations = relations(users, ({ many }) => ({
   memberships: many(campaignMembers)

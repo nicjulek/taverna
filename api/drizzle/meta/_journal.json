@@ -71,6 +71,13 @@
       "when": 1794846567093,
       "tag": "0009_combate",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794918727366,
+      "tag": "0010_chat_e_imersao",
+      "breakpoints": true
     }
   ]
 }
