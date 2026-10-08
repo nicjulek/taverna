@@ -12,7 +12,13 @@ describe('sniffMime', () => {
     [[0x1a, 0x45, 0xdf, 0xa3], 'video/webm'],
     ['\u0000\u0000\u0000\u0018ftypmp42', 'video/mp4'],
     ['<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>', 'image/svg+xml'],
-    ['  <svg viewBox="0 0 10 10"></svg>', 'image/svg+xml']
+    ['  <svg viewBox="0 0 10 10"></svg>', 'image/svg+xml'],
+    ['RIFF\u0000\u0000\u0000\u0000WAVEfmt ', 'audio/wav'],
+    ['OggS\u0000\u0002', 'audio/ogg'],
+    ['fLaC\u0000\u0000', 'audio/flac'],
+    ['ID3\u0004\u0000', 'audio/mpeg'],
+    [[0xff, 0xfb, 0x90, 0x64], 'audio/mpeg'],
+    ['\u0000\u0000\u0000\u0020ftypM4A ', 'audio/mp4']
   ])('reconhece pelo conteúdo, não pela extensão', (bytes, mime) => {
     expect(sniffMime(pad(bytes as number[] | string))).toBe(mime)
   })

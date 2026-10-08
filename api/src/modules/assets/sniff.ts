@@ -9,6 +9,12 @@ export function sniffMime(buffer: Buffer): AssetMime | null {
   if (startsWith(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
   if (ascii(buffer, 0, 6) === 'GIF87a' || ascii(buffer, 0, 6) === 'GIF89a') return 'image/gif'
   if (ascii(buffer, 0, 4) === 'RIFF' && ascii(buffer, 8, 12) === 'WEBP') return 'image/webp'
+  if (ascii(buffer, 0, 4) === 'RIFF' && ascii(buffer, 8, 12) === 'WAVE') return 'audio/wav'
+  if (ascii(buffer, 0, 4) === 'OggS') return 'audio/ogg'
+  if (ascii(buffer, 0, 4) === 'fLaC') return 'audio/flac'
+  if (ascii(buffer, 0, 3) === 'ID3' || (buffer[0] === 0xff && (buffer[1]! & 0xe0) === 0xe0 && (buffer[1]! & 0x06) !== 0))
+    return 'audio/mpeg'
+  if (ascii(buffer, 4, 8) === 'ftyp' && ['M4A ', 'M4B '].includes(ascii(buffer, 8, 12))) return 'audio/mp4'
   if (startsWith(buffer, [0x1a, 0x45, 0xdf, 0xa3])) return 'video/webm'
   if (ascii(buffer, 4, 8) === 'ftyp') return 'video/mp4'
   const head = buffer
