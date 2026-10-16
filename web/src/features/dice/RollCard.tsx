@@ -41,15 +41,17 @@ function DieChip({ die, term }: { die: Die; term: DiceTerm }) {
   )
 }
 
-export function RollCard({ roll, fresh }: { roll: RollDto; fresh?: boolean }) {
+export function RollCard({ roll, fresh, compact }: { roll: RollDto; fresh?: boolean; compact?: boolean }) {
   const { result } = roll
+  const dropped = result.terms.reduce((n, t) => n + t.dice.filter((d) => d.dropped).length, 0)
   return (
     <article
       className={cn(
-        'flex gap-3 rounded-panel border border-line bg-surface/70 p-4',
+        'flex gap-3 rounded-panel border border-line bg-surface/70',
+        compact ? 'p-3' : 'p-4',
         fresh && 'motion-safe:animate-[roll-in_420ms_cubic-bezier(.2,.9,.3,1.2)]'
       )}
-      aria-label={`${roll.displayName}${roll.label ? `, ${roll.label}` : ''}: ${result.total}`}
+      aria-label={`${roll.displayName}${roll.label ? `, ${roll.label}` : ''}: ${roll.hidden ? 'resultado oculto' : result.total}`}
     >
       <Token name={roll.displayName} color={roll.color} decorative />
       <div className="min-w-0 flex-1">
@@ -65,7 +67,8 @@ export function RollCard({ roll, fresh }: { roll: RollDto; fresh?: boolean }) {
             </span>
           )}
         </header>
-        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-moss">
+        {roll.hidden && <p className="mt-2 text-sm text-moss">Rolou {result.expression} às cegas. Só os mestres sabem o resultado.</p>}
+        <p className={cn('mt-2 flex flex-wrap items-center gap-1.5 text-moss', roll.hidden && 'hidden')}>
           {result.segments.map((segment, index) => {
             if (segment.kind === 'text')
               return (
@@ -86,15 +89,23 @@ export function RollCard({ roll, fresh }: { roll: RollDto; fresh?: boolean }) {
         </p>
         {result.critical && (
           <p className={cn('mt-2 text-sm font-medium', result.critical === 'success' ? 'text-brass-bright' : 'text-seal-soft')}>
-            {result.critical === 'success' ? '20 natural!' : '1 natural'}
+            {result.critical === 'success' ? 'Crítico: 20 natural!' : 'Falha crítica: 1 natural'}
+          </p>
+        )}
+        {dropped > 0 && (
+          <p className="mt-1 text-xs text-moss-dim">
+            {dropped === 1 ? '1 dado descartado' : `${dropped} dados descartados`}
+            {/kh|kl/.test(result.expression) &&
+              (/kh1/.test(result.expression) ? ' (vantagem)' : /kl1/.test(result.expression) ? ' (desvantagem)' : '')}
           </p>
         )}
       </div>
-      <div className="flex shrink-0 flex-col items-end justify-center">
+      <div className={cn('flex shrink-0 flex-col items-end justify-center', roll.hidden && 'hidden')}>
         <span className="text-xs text-moss-dim">total</span>
         <span
           className={cn(
-            'font-display text-4xl leading-none font-bold tabular-nums lining-nums',
+            'font-display leading-none font-bold tabular-nums lining-nums',
+            compact ? 'text-3xl' : 'text-4xl',
             result.critical === 'success' ? 'text-brass-bright' : result.critical === 'failure' ? 'text-seal-soft' : 'text-bone'
           )}
         >

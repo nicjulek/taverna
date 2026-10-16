@@ -15,5 +15,8 @@ export const queryKeys = {
   assets: (campaignId: string) => ['campaigns', campaignId, 'assets'] as const,
   rolls: (campaignId: string) => ['campaigns', campaignId, 'rolls'] as const,
   combat: (campaignId: string) => ['campaigns', campaignId, 'combat'] as const,
+  messages: (campaignId: string) => ['campaigns', campaignId, 'messages'] as const,
+  handouts: (campaignId: string) => ['campaigns', campaignId, 'handouts'] as const,
+  jukebox: (campaignId: string) => ['campaigns', campaignId, 'jukebox'] as const,
   invite: (code: string) => ['invite', code] as const
 }

@@ -1,4 +1,12 @@
-import { isGameMaster, type AssetDto, type LightPreset, type SceneItemDto, type SceneItemInput, type SceneLayer } from '@taverna/shared'
+import {
+  isGameMaster,
+  isVisual,
+  type AssetDto,
+  type LightPreset,
+  type SceneItemDto,
+  type SceneItemInput,
+  type SceneLayer
+} from '@taverna/shared'
 import { calibrate, type Point, type TemplateKind, type WallType } from '@taverna/tabletop'
 import { Crosshair, Map as MapIcon, Maximize } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -19,6 +27,7 @@ import { TableCanvas, type View } from './TableCanvas'
 import { Toolbar } from './Toolbar'
 import { useVision } from './vision'
 import { CombatTracker } from '../combat/CombatTracker'
+import { ChatPanel } from '../chat/ChatPanel'
 import { useCombat, useCombatFeed } from '../combat/hooks'
 import { monsterToken } from '../combat/stats'
 import { compendiumEntryQuery } from '../compendium/hooks'
@@ -64,6 +73,7 @@ export function TablePage() {
   const [wallType, setWallType] = useState<WallType>('wall')
   const [lightPreset, setLightPreset] = useState<LightPreset>('torch')
   const [preview, setPreview] = useState(false)
+  const [panel, setPanel] = useState<'details' | 'chat'>('details')
   const [targets, setTargets] = useState<Set<string>>(() => new Set())
   useCombatFeed(campaign.id)
   const queryClient = useQueryClient()
@@ -350,7 +360,7 @@ export function TablePage() {
             onTarget={toggleTarget}
             onDropFiles={async (files, at) => {
               const sent = await upload.run(files)
-              for (const [index, asset] of sent.entries())
+              for (const [index, asset] of sent.filter((a) => isVisual(a.mime)).entries())
                 await placeAsset(asset, { x: at.x + index * grid.size, y: at.y + index * grid.size })
             }}
           />
@@ -374,89 +384,112 @@ export function TablePage() {
         </p>
       </section>
 
-      <aside className="flex flex-col gap-4 rounded-panel border border-line bg-surface/60 p-4 max-xl:order-3" aria-label="Detalhes">
-        <CombatTracker
-          campaignId={campaign.id}
-          scene={scene}
-          gm={gm}
-          me={me}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setTool('select')
-            setSelectedId(id)
-          }}
-        />
-        {selected ? (
-          <ItemInspector
-            item={selected}
-            scene={scene}
-            gm={gm}
-            me={me}
-            onUpdate={(patch) => update(selected.id, patch)}
-            onRemove={() => remove(selected.id)}
-            members={campaign.memberList}
-            campaignId={campaign.id}
-            target={scene.items.find((i) => targets.has(i.id) && i.id !== selected.id) ?? null}
-            onCalibrate={() => {
-              setTool('calibrate')
-              toast('Arraste sobre uma célula da grade desenhada no mapa.')
-            }}
-          />
-        ) : gm ? (
-          <SceneSettingsPanel
-            settings={scene.settings}
-            onChange={(settings) => mutations.update.mutate({ id: scene.id, settings }, { onError: fail })}
-            onResetExplored={() =>
-              mutations.resetExplored.mutate(scene.id, { onSuccess: () => toast('A névoa voltou a cobrir a cena.'), onError: fail })
-            }
-          />
+      <aside className="flex flex-col gap-4 rounded-panel border border-line bg-surface/60 p-4 max-xl:order-3" aria-label="Painel da mesa">
+        <div role="tablist" aria-label="Painel da mesa" className="-mt-1 flex gap-1 border-b border-line">
+          {(['details', 'chat'] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={panel === key}
+              onClick={() => setPanel(key)}
+              className={cn(
+                '-mb-px border-b-2 px-3 py-2 text-sm',
+                panel === key ? 'border-brass text-bone' : 'border-transparent text-moss hover:text-bone'
+              )}
+            >
+              {key === 'details' ? 'Detalhes' : 'Chat'}
+            </button>
+          ))}
+        </div>
+        {panel === 'chat' ? (
+          <ChatPanel compact />
         ) : (
-          <p className="text-sm text-moss">
-            Clique em algo na mesa para ver os detalhes. Você pode desenhar, medir e marcar áreas nas camadas de objetos e tokens.
-          </p>
+          <>
+            <CombatTracker
+              campaignId={campaign.id}
+              scene={scene}
+              gm={gm}
+              me={me}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setTool('select')
+                setSelectedId(id)
+              }}
+            />
+            {selected ? (
+              <ItemInspector
+                item={selected}
+                scene={scene}
+                gm={gm}
+                me={me}
+                onUpdate={(patch) => update(selected.id, patch)}
+                onRemove={() => remove(selected.id)}
+                members={campaign.memberList}
+                campaignId={campaign.id}
+                target={scene.items.find((i) => targets.has(i.id) && i.id !== selected.id) ?? null}
+                onCalibrate={() => {
+                  setTool('calibrate')
+                  toast('Arraste sobre uma célula da grade desenhada no mapa.')
+                }}
+              />
+            ) : gm ? (
+              <SceneSettingsPanel
+                settings={scene.settings}
+                onChange={(settings) => mutations.update.mutate({ id: scene.id, settings }, { onError: fail })}
+                onResetExplored={() =>
+                  mutations.resetExplored.mutate(scene.id, { onSuccess: () => toast('A névoa voltou a cobrir a cena.'), onError: fail })
+                }
+              />
+            ) : (
+              <p className="text-sm text-moss">
+                Clique em algo na mesa para ver os detalhes. Você pode desenhar, medir e marcar áreas nas camadas de objetos e tokens.
+              </p>
+            )}
+            <section aria-label="Tokens na cena" className="border-t border-line pt-3">
+              <h2 className="mb-2 text-sm font-medium text-moss">Tokens na cena</h2>
+              {tokens.length === 0 ? (
+                <p className="text-sm text-moss-dim">Nenhum token por aqui.</p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {tokens.map((token) => (
+                    <li key={token.id} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        aria-pressed={token.id === selectedId}
+                        onClick={() => {
+                          setTool('select')
+                          setSelectedId(token.id)
+                        }}
+                        className={cn(
+                          'flex min-w-0 flex-1 items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm hover:bg-surface-raised',
+                          token.id === selectedId && 'bg-surface-raised'
+                        )}
+                      >
+                        <span className="size-3 rounded-full" style={{ background: String(token.data.color ?? '#c58b3a') }} aria-hidden />
+                        {String(token.data.name ?? 'Token')}
+                        {token.layer === 'gm' && <span className="text-moss-dim">(oculto)</span>}
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={targets.has(token.id)}
+                        aria-label={`Mirar em ${String(token.data.name ?? 'Token')}`}
+                        title="Marcar como alvo"
+                        onClick={() => toggleTarget(token.id)}
+                        className={cn(
+                          'grid size-8 shrink-0 place-items-center rounded-control text-moss-dim hover:text-bone',
+                          targets.has(token.id) && 'text-[#e07a66]'
+                        )}
+                      >
+                        <Crosshair className="size-4" aria-hidden />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
         )}
-        <section aria-label="Tokens na cena" className="border-t border-line pt-3">
-          <h2 className="mb-2 text-sm font-medium text-moss">Tokens na cena</h2>
-          {tokens.length === 0 ? (
-            <p className="text-sm text-moss-dim">Nenhum token por aqui.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {tokens.map((token) => (
-                <li key={token.id} className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    aria-pressed={token.id === selectedId}
-                    onClick={() => {
-                      setTool('select')
-                      setSelectedId(token.id)
-                    }}
-                    className={cn(
-                      'flex min-w-0 flex-1 items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm hover:bg-surface-raised',
-                      token.id === selectedId && 'bg-surface-raised'
-                    )}
-                  >
-                    <span className="size-3 rounded-full" style={{ background: String(token.data.color ?? '#c58b3a') }} aria-hidden />
-                    {String(token.data.name ?? 'Token')}
-                    {token.layer === 'gm' && <span className="text-moss-dim">(oculto)</span>}
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={targets.has(token.id)}
-                    aria-label={`Mirar em ${String(token.data.name ?? 'Token')}`}
-                    title="Marcar como alvo"
-                    onClick={() => toggleTarget(token.id)}
-                    className={cn(
-                      'grid size-8 shrink-0 place-items-center rounded-control text-moss-dim hover:text-bone',
-                      targets.has(token.id) && 'text-[#e07a66]'
-                    )}
-                  >
-                    <Crosshair className="size-4" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       </aside>
 
       {gm && (

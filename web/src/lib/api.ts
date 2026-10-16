@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
 async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   let response: Response
@@ -36,6 +36,7 @@ export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   delete: <T = void>(path: string) => request<T>('DELETE', path),
   upload: <T>(path: string, form: FormData) => request<T>('POST', path, form)
 }

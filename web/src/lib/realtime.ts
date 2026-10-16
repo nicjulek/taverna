@@ -38,6 +38,7 @@ export function useCampaignRoom(campaignId: string): { online: PresenceDto[]; co
       if (scope === 'journals') void queryClient.invalidateQueries({ queryKey: queryKeys.journals(campaignId) })
       else if (scope === 'assets') void queryClient.invalidateQueries({ queryKey: queryKeys.assets(campaignId) })
       else if (scope === 'compendium') void queryClient.invalidateQueries({ queryKey: queryKeys.compendium(campaignId) })
+      else if (scope === 'handouts') void queryClient.invalidateQueries({ queryKey: queryKeys.handouts(campaignId) })
       else if (scope === 'characters') void queryClient.invalidateQueries({ queryKey: queryKeys.characters(campaignId) })
       else void queryClient.invalidateQueries({ queryKey: queryKeys.campaign(campaignId) })
       if (scope === 'members' || scope === 'campaign') void queryClient.invalidateQueries({ queryKey: queryKeys.campaigns, exact: true })
