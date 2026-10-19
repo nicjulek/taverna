@@ -11,6 +11,7 @@ import { CharactersPage } from '@/features/characters/CharactersPage'
 import { CharacterPage } from '@/features/characters/sheet/CharacterPage'
 import { CompendiumPage } from '@/features/compendium/CompendiumPage'
 import { TablePage } from '@/features/table/TablePage'
+import { HandoutsPage } from '@/features/handouts/HandoutsPage'
 import { DicePage } from '@/features/dice/DicePage'
 import { MembersPage } from '@/features/members/MembersPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -67,6 +68,7 @@ export const router = createBrowserRouter([
                   },
                   { path: 'mesa', element: <TablePage /> },
                   { path: 'dados', element: <DicePage /> },
+                  { path: 'revelacoes', element: <HandoutsPage /> },
                   { path: 'jogadores', element: <MembersPage /> },
                   { path: 'ajustes', element: <SettingsPage /> }
                 ]

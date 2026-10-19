@@ -1,10 +1,10 @@
-import type { AssetDto } from '@taverna/shared'
+import { type AssetDto, isVisual } from '@taverna/shared'
 import { Film, Upload } from 'lucide-react'
 import { useRef } from 'react'
 import { toast } from 'sonner'
 import { Button, Dialog, DialogContent, EmptyState, Skeleton } from '@/components/ui'
 import { useAssets } from './hooks'
-import { ACCEPT, useUploadFiles } from './upload'
+import { useUploadFiles, VISUAL_ACCEPT } from './upload'
 
 interface GalleryProps {
   campaignId: string
@@ -17,6 +17,7 @@ export function Gallery({ campaignId, open, onOpenChange, onPick }: GalleryProps
   const assets = useAssets(campaignId)
   const upload = useUploadFiles(campaignId)
   const input = useRef<HTMLInputElement>(null)
+  const visual = (assets.data ?? []).filter((asset) => isVisual(asset.mime))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -28,7 +29,7 @@ export function Gallery({ campaignId, open, onOpenChange, onPick }: GalleryProps
         <input
           ref={input}
           type="file"
-          accept={ACCEPT}
+          accept={VISUAL_ACCEPT}
           multiple
           className="sr-only"
           tabIndex={-1}
@@ -49,11 +50,11 @@ export function Gallery({ campaignId, open, onOpenChange, onPick }: GalleryProps
               <Skeleton key={i} className="aspect-[4/3]" />
             ))}
           </div>
-        ) : !assets.data?.length ? (
+        ) : !visual.length ? (
           <EmptyState title="A galeria está vazia">Envie um mapa ou arraste o arquivo direto para a mesa.</EmptyState>
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {assets.data.map((asset) => (
+            {visual.map((asset) => (
               <li key={asset.id}>
                 <button
                   type="button"

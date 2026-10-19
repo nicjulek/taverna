@@ -3,6 +3,12 @@ import { toast } from 'sonner'
 import { useUploadAsset } from './hooks'
 
 export const ACCEPT = Object.keys(ASSET_TYPES).join(',')
+export const VISUAL_ACCEPT = Object.keys(ASSET_TYPES)
+  .filter((mime) => !mime.startsWith('audio/'))
+  .join(',')
+export const AUDIO_ACCEPT = Object.keys(ASSET_TYPES)
+  .filter((mime) => mime.startsWith('audio/'))
+  .join(',')
 
 export function readNatural(asset: Pick<AssetDto, 'url' | 'mime'>): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
