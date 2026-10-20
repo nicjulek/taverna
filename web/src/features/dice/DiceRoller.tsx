@@ -5,6 +5,7 @@ import { Minus, Plus, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { DieShape } from '@/components/art/DieShape'
 import { Button, Field, Input, Select } from '@/components/ui'
+import { setDice3d, useDice3d } from '../dice3d/preference'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { useRoll } from './hooks'
@@ -21,6 +22,7 @@ export function DiceRoller({ campaignId }: { campaignId: string }) {
   const [label, setLabel] = useState('')
   const [mode, setMode] = useState<RollMode>('normal')
   const [visibility, setVisibility] = useState<RollVisibility>('public')
+  const dice3d = useDice3d()
   const roll = useRoll(campaignId)
 
   const check = preview(expression)
@@ -159,6 +161,15 @@ export function DiceRoller({ campaignId }: { campaignId: string }) {
       <Button type="submit" size="lg" loading={roll.isPending} disabled={!check?.ok}>
         <DieShape sides={20} className="size-5" /> Rolar
       </Button>
+      <label className="flex items-center gap-2 text-sm text-moss">
+        <input
+          type="checkbox"
+          checked={dice3d}
+          onChange={(e) => setDice3d(e.target.checked)}
+          className="size-4 accent-[var(--color-brass)]"
+        />
+        Dados 3D rolando na tela, só para você
+      </label>
     </form>
   )
 }
