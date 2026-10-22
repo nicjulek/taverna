@@ -1,5 +1,5 @@
 import { isGameMaster, ROLE_LABELS } from '@taverna/shared'
-import { BookMarked, BookOpen, Dices, Map as MapIcon, ScrollText, Settings, Users } from 'lucide-react'
+import { BookMarked, BookOpen, Dices, Feather, Map as MapIcon, ScrollText, Settings, Users } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { CriticalFail } from '@/components/art/CriticalFail'
@@ -9,7 +9,12 @@ import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { useCampaignRoom } from '@/lib/realtime'
 import { useSession } from '@/lib/session'
+import { useMessageFeed } from '../chat/hooks'
 import { useRollFeed } from '../dice/hooks'
+import { HandoutOverlay } from '../handouts/HandoutOverlay'
+import { Jukebox } from '../jukebox/Jukebox'
+import { Dice3dOverlay } from '../dice3d/Dice3dOverlay'
+import { VoiceDock } from '../voice/VoiceDock'
 import type { CampaignContext } from './context'
 import { useCampaign } from './hooks'
 
@@ -17,7 +22,8 @@ const TABS = [
   { to: 'mesa', label: 'Mesa', icon: MapIcon },
   { to: 'diario', label: 'Diário', icon: BookOpen },
   { to: 'fichas', label: 'Fichas', icon: ScrollText },
-  { to: 'dados', label: 'Dados', icon: Dices },
+  { to: 'dados', label: 'Chat e dados', icon: Dices },
+  { to: 'revelacoes', label: 'Revelações', icon: Feather },
   { to: 'compendio', label: 'Compêndio', icon: BookMarked },
   { to: 'jogadores', label: 'Jogadores', icon: Users },
   { to: 'ajustes', label: 'Ajustes', icon: Settings }
@@ -31,7 +37,15 @@ export function CampaignLayout() {
   const { data: me } = useSession()
   useRollFeed(campaignId, (roll) => {
     if (roll.userId === me?.id || pathname.endsWith('/dados')) return
-    toast(`${roll.displayName} rolou ${roll.result.total}`, { description: roll.label || roll.result.expression })
+    toast(roll.hidden ? `${roll.displayName} rolou às cegas` : `${roll.displayName} rolou ${roll.result.total}`, {
+      description: roll.label || roll.result.expression
+    })
+  })
+  useMessageFeed(campaignId, (message) => {
+    if (message.userId === me?.id || pathname.endsWith('/dados')) return
+    toast(message.audience === 'whisper' ? `${message.displayName} cochichou` : message.displayName, {
+      description: message.text.length > 120 ? `${message.text.slice(0, 117)}…` : message.text
+    })
   })
 
   if (error) {
@@ -117,12 +131,16 @@ export function CampaignLayout() {
 
       <div
         className={cn(
-          'mx-auto flex w-full flex-1 flex-col px-4 pt-6 pb-10 sm:px-6',
+          'mx-auto flex w-full flex-1 flex-col px-4 pt-6 pb-24 sm:px-6',
           pathname.endsWith('/mesa') ? 'max-w-[110rem]' : 'max-w-6xl'
         )}
       >
         <Outlet context={{ campaign, online } satisfies CampaignContext} />
       </div>
+      <HandoutOverlay campaignId={campaign.id} gm={isGameMaster(campaign.role)} />
+      <Jukebox campaignId={campaign.id} gm={isGameMaster(campaign.role)} />
+      <Dice3dOverlay campaignId={campaign.id} />
+      {me && <VoiceDock campaignId={campaign.id} me={me} />}
     </div>
   )
 }
