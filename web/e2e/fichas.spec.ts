@@ -35,7 +35,7 @@ test('jogadora cria a ficha, rola da ficha e o mestre acompanha', async ({ brows
   await gm.getByRole('link', { name: 'Fichas' }).click()
   await gm.getByRole('link', { name: /Nix/ }).click()
   await expect(gm.getByRole('button', { name: 'Rolar Furtividade +10' })).toBeVisible()
-  await gm.getByRole('link', { name: 'Dados' }).click()
+  await gm.getByRole('link', { name: 'Chat e dados' }).click()
 
   await player.getByRole('button', { name: 'Vantagem', exact: true }).click()
   await player.getByRole('button', { name: 'Rolar Furtividade +10' }).click()

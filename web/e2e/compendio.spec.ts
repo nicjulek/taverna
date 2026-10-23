@@ -39,8 +39,8 @@ test('compêndio com SRD, homebrew do mestre e magia levada para a ficha', async
   await player.goto(invite!)
   await signUp(player, 'Maga')
   await player.getByRole('button', { name: 'Entrar na campanha' }).click()
-  await player.getByRole('link', { name: 'Dados' }).click()
-  await expect(player.getByRole('heading', { name: 'Nenhum dado rolado ainda' })).toBeVisible()
+  await player.getByRole('link', { name: 'Chat e dados' }).click()
+  await expect(player.getByText('Ninguém falou nada ainda')).toBeVisible()
 
   await player.getByRole('link', { name: 'Fichas' }).click()
   await player.getByRole('button', { name: 'Nova ficha' }).click()

@@ -12,7 +12,7 @@ test('mestre cria a campanha, convida um jogador e compartilha só o que quer', 
   await gm.getByRole('button', { name: 'Criar campanha' }).click()
   await expect(gm.getByRole('heading', { name: 'Cripta do Rei Lich' })).toBeVisible()
 
-  await gm.getByRole('button', { name: 'Nova página' }).click()
+  await gm.getByRole('complementary', { name: 'Páginas do diário' }).getByRole('button', { name: 'Nova página' }).click()
   await expect(gm.getByLabel('Título')).toHaveValue('Página sem título')
   await gm.getByLabel('Título').fill('Rumores da vila')
   await gm.getByLabel('Conteúdo').fill('O ferreiro viu **luzes** no cemitério.')
@@ -24,7 +24,7 @@ test('mestre cria a campanha, convida um jogador e compartilha só o que quer', 
   await gm.getByRole('button', { name: 'Salvar permissões' }).click()
   await expect(gm.getByText('Todos podem ler')).toBeVisible()
 
-  await gm.getByRole('button', { name: 'Nova página' }).click()
+  await gm.getByRole('complementary', { name: 'Páginas do diário' }).getByRole('button', { name: 'Nova página' }).click()
   await expect(gm.getByLabel('Título')).toHaveValue('Página sem título')
   await gm.getByLabel('Título').fill('O Lich é o prefeito')
   await gm.getByRole('button', { name: 'Salvar página' }).click()
