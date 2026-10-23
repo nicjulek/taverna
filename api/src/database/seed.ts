@@ -1,12 +1,13 @@
 import { roll } from '@taverna/dice'
 import { newSheet, type Sheet5e } from '@taverna/rules-5e'
 import bcrypt from 'bcryptjs'
-import { DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
+import { type AssetMime, DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { newInviteCode } from '../modules/campaigns/campaigns.service'
 import * as schema from './schema'
+import { creakWav, dripsWav, portraitSvg } from './seed-art'
 import { mineMapSvg, MINE_MAP, mineWalls } from './seed-map'
 
 export const DEMO_PASSWORD = 'taverna123'
@@ -412,7 +413,8 @@ async function seed(): Promise<void> {
     { user: bruno, expression: '2d20kh1+5 # Ataque com arco longo' },
     { user: bruno, expression: '1d8+3 # Dano' },
     { user: ana, expression: '1d20+6 # Furtividade', visibility: 'gm' },
-    { user: gm, expression: '1d6+2 # Lança do kobold' }
+    { user: gm, expression: '1d6+2 # Lança do kobold' },
+    { user: bruno, expression: '1d20+2 # Percepção', visibility: 'blind' }
   ]
   await db.insert(schema.rolls).values(
     rolls.map(({ user, expression, visibility = 'public' }, index) => {
@@ -427,6 +429,88 @@ async function seed(): Promise<void> {
       }
     })
   )
+
+  await db.insert(schema.messages).values([
+    {
+      campaignId: campaign!.id,
+      userId: gm.id,
+      text: 'A trilha desce em espiral. Vocês ouvem água pingando lá embaixo.',
+      audience: 'all',
+      recipients: [],
+      createdAt: new Date(start + 2 * 60_000)
+    },
+    {
+      campaignId: campaign!.id,
+      userId: ana.id,
+      text: 'Vou na frente, com a lanterna coberta.',
+      audience: 'all',
+      recipients: [],
+      createdAt: new Date(start + 4 * 60_000)
+    },
+    {
+      campaignId: campaign!.id,
+      userId: bruno.id,
+      text: 'Fico dois passos atrás, arco pronto.',
+      audience: 'all',
+      recipients: [],
+      createdAt: new Date(start + 5 * 60_000)
+    },
+    {
+      campaignId: campaign!.id,
+      userId: gm.id,
+      text: 'Lia, você nota marcas de garras frescas no batente da porta.',
+      audience: 'whisper',
+      recipients: [ana.id],
+      createdAt: new Date(start + 9 * 60_000)
+    },
+    {
+      campaignId: campaign!.id,
+      userId: ana.id,
+      text: 'Posso esconder as marcas do Doran por enquanto?',
+      audience: 'gm',
+      recipients: [],
+      createdAt: new Date(start + 10 * 60_000)
+    }
+  ])
+
+  const addAsset = async (name: string, mime: AssetMime, data: Buffer) => {
+    const [row] = await db
+      .insert(schema.assets)
+      .values({ campaignId: campaign!.id, uploaderId: gm.id, name, mime, size: data.length })
+      .returning()
+    await db.insert(schema.assetBlobs).values({ assetId: row!.id, data })
+    return row!
+  }
+  const portrait = await addAsset('Dama da Mina.svg', 'image/svg+xml', Buffer.from(portraitSvg()))
+  const drips = await addAsset('Gotejar na mina.wav', 'audio/wav', dripsWav())
+  await addAsset('Porta rangendo.wav', 'audio/wav', creakWav())
+  await db.insert(schema.handouts).values([
+    {
+      campaignId: campaign!.id,
+      title: 'Bilhete de Tobias',
+      kind: 'letter',
+      body: 'Se alguém achar isto: a Dama não é uma pessoa. Ela mora no veio de prata e fala pela boca dos kobolds. Não deixem que levem a lanterna.\n\n— T.',
+      sharedWith: 'all'
+    },
+    {
+      campaignId: campaign!.id,
+      title: 'A Dama da Mina',
+      kind: 'portrait',
+      body: 'Vista de relance no fundo da galeria, coroada de pedras.',
+      assetId: portrait.id,
+      sharedWith: [ana.id]
+    },
+    {
+      campaignId: campaign!.id,
+      title: 'Inscrição na porta selada',
+      kind: 'riddle',
+      body: 'Tenho veias e não sangro,\nfui tirada do escuro,\nbrilho na mão do rico\ne enfeito o pescoço do justo.',
+      sharedWith: 'none'
+    }
+  ])
+  await db
+    .insert(schema.jukebox)
+    .values({ campaignId: campaign!.id, assetId: drips.id, playing: false, position: 0, loop: true, volume: 0.6 })
 
   const check = await db.query.campaigns.findFirst({ where: eq(schema.campaigns.id, campaign!.id) })
   console.log(`Campanha de demonstração criada: ${check?.name}`)
