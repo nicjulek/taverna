@@ -10,6 +10,8 @@ COPY api/package.json api/
 COPY web/package.json web/
 RUN npm ci
 COPY . .
+ARG VITE_STUN_URLS=stun:stun.l.google.com:19302
+ENV VITE_STUN_URLS=$VITE_STUN_URLS
 RUN npm run build
 
 FROM node:22-alpine AS runtime
