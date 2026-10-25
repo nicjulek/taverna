@@ -18,6 +18,11 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Luz e névoa de guerra**: paredes desenhadas clicando canto a canto pelo contorno do mapa, portas que abrem, fecham ou trancam e janelas que deixam ver, mas não passar. Luzes de vela, tocha, lampião, lanterna e das magias Luz e Luz do Dia, com luz plena e penumbra, presas no mapa ou carregadas pelo token. Visão no escuro por token. Com a névoa ligada, cada jogador só vê o que o próprio token enxerga, e o que o grupo já viu fica no mapa, mais escuro. O mestre vê tudo e pode conferir a mesa do jeito que os jogadores veem.
 - **Combate**: tokens com barra de PV ligada à ficha, ícones de condição, efeitos com duração em rodadas e auras. Rastreador de iniciativa que ordena sozinho, rola a das criaturas, conta as rodadas e passa a vez, com criaturas ocultas que só o mestre vê. Escolha o alvo com um clique duplo, ataque com as armas da ficha ou as ações do monstro do compêndio, e o resultado já vem contra a CA do alvo, com crítico dobrando os dados. O dano é aplicado com um clique e considera resistência, imunidade e vulnerabilidade, avisando o teste de concentração quando precisa.
 - **Motor de regras do 5e**: modificadores, proficiência com especialização e pau para toda obra, espaços de magia com multiclasse e pacto, CD de magia, crítico, testes contra a morte e pontos de vida, cada fórmula com teste automatizado.
+- **Chat da mesa**: conversa e rolagens no mesmo histórico, na página Chat e dados e numa aba ao lado da mesa. `/r 1d20+5` rola, `/w Ana` cochicha só para ela, `/m` fala só com os mestres e `/br` rola às cegas: o resultado vai só para os mestres e quem rolou sabe apenas que rolou. Cada rolagem mostra o dado descartado na vantagem ou desvantagem, o 20 natural e o 1 natural.
+- **Dados 3D**: quem quiser liga dados com física rolando por cima da tela. A animação é só de enfeite: a física roda primeiro, e a face que fica para cima recebe o número que o servidor tirou.
+- **Revelações**: cartas, enigmas, retratos de NPC e itens que o mestre prepara e mostra na hora certa, para todos ou para um jogador só. Aparecem na tela de quem recebe e ficam guardados na aba Revelações.
+- **Trilha sonora**: o mestre envia músicas e efeitos (MP3, OGG, WAV, FLAC e M4A), toca, pausa, repete e muda o volume da mesa, e todo mundo ouve no mesmo ponto da faixa. Efeitos tocam uma vez por cima da música. Cada jogador tem o próprio volume.
+- **Voz e vídeo** pelo navegador, sem instalar nada: cada um entra com microfone ou câmera quando quiser e pode desligar a qualquer momento.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
 | Entrar                      | Primeiros passos do mestre          |
@@ -40,7 +45,9 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 
 ![Compêndio](docs/compendio.webp)
 
-![Dados](docs/dados.webp)
+![Chat e dados](docs/dados.webp)
+
+![Revelação na tela do jogador](docs/revelacao.webp)
 
 <p align="center">
   <img src="docs/celular-entrar.webp" alt="Entrar pelo celular" width="240" />
@@ -56,7 +63,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Ilustrações próprias em SVG**, feitas para o projeto: a mesa da taverna no login, a mesa vazia, o livro do diário, a carta com lacre do convite (e o lacre partido quando o convite não vale mais) e o d20 tirando 1 nas telas de erro.
 - **Pensado para quem chega pelo celular:** o convite abre direto no telefone, cria a conta e volta sozinho para a campanha.
 - **Primeiros passos do mestre:** depois de criar a campanha, um painel guia os três passos até a primeira sessão e marca cada um quando é feito.
-- **WCAG 2.1 AA:** contraste conferido em todos os tokens, link para pular o cabeçalho, foco que volta para quem abriu cada diálogo, alvos de 44 px em telas de toque e nomes acessíveis nos avatares e ícones. O teste `acessibilidade.spec.ts` roda o **axe** em 8 telas e falha se aparecer qualquer violação.
+- **WCAG 2.1 AA:** contraste conferido em todos os tokens, link para pular o cabeçalho, foco que volta para quem abriu cada diálogo, alvos de 44 px em telas de toque e nomes acessíveis nos avatares e ícones. O teste `acessibilidade.spec.ts` roda o **axe** em 14 telas e falha se aparecer qualquer violação.
 
 ## Stack
 
@@ -146,6 +153,18 @@ As paredes, as luzes e as posições de todos os tokens chegam ao navegador do j
 
 Os arquivos enviados ficam no PostgreSQL, então não é preciso configurar armazenamento à parte. O tipo do arquivo é conferido pelos primeiros bytes, não pela extensão, e SVG é servido com uma política de segurança que bloqueia scripts.
 
+## Chat, revelações e som
+
+As rolagens têm quatro jeitos de aparecer: todos veem, eu e os mestres, só eu e às cegas. Na rolagem às cegas o servidor manda o resultado inteiro só para os mestres; quem rolou recebe a mesma rolagem sem os dados nem o total, tanto na hora quanto ao carregar o histórico.
+
+Cochichos e mensagens para os mestres também são filtrados na API, e não só escondidos na tela. As revelações seguem a mesma regra: o jogador só recebe as que foram mostradas para ele.
+
+A trilha sonora guarda a faixa, se está tocando, o ponto em que começou e a hora do servidor. Cada navegador calcula onde a música deveria estar e só pula quando se afasta mais de um segundo, então quem entra no meio da sessão ouve a mesma parte que os outros. Navegadores bloqueiam som antes do primeiro clique; nesse caso aparece o botão Ativar som.
+
+### Voz e vídeo
+
+A conversa usa WebRTC direto entre os navegadores, em malha: cada pessoa se conecta com cada outra, e a API só repassa os sinais de conexão pelo Socket.IO. Funciona bem até umas seis pessoas. O endereço público de cada um é descoberto por STUN (`VITE_STUN_URLS`, separado por vírgula; o padrão é o servidor público do Google). Não há servidor TURN, então redes muito fechadas, como algumas corporativas ou de celular, podem não conectar; para isso, ponha um TURN na mesma variável.
+
 ## Compêndio e SRD 5.1
 
 O SRD vem do projeto aberto [5e-database](https://github.com/5e-bits/5e-database). O script `api/scripts/build-srd.mjs` converte os arquivos dele para o formato da Taverna e gera `api/srd/srd-5.1.json.gz`, que a migração importa sozinha (`npm run db:migrate`). Rodar de novo atualiza as entradas sem duplicar.
@@ -195,44 +214,50 @@ Os testes de integração usam o banco `taverna_test`, criado automaticamente pe
 
 Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sessão.
 
-| Método             | Rota                                                | Descrição                         |
-| ------------------ | --------------------------------------------------- | --------------------------------- |
-| POST               | `/auth/register`, `/auth/login`, `/auth/logout`     | Sessão                            |
-| GET, PATCH         | `/auth/me`                                          | Perfil                            |
-| GET, POST          | `/campaigns`                                        | Suas campanhas e criar            |
-| GET, PATCH, DELETE | `/campaigns/:id`                                    | Detalhes, editar e apagar         |
-| POST, DELETE       | `/campaigns/:id/invite`                             | Gerar ou desativar o link         |
-| GET                | `/invites/:code`                                    | Prévia do convite                 |
-| POST               | `/invites/:code/accept`                             | Entrar na campanha                |
-| GET                | `/campaigns/:id/members`                            | Participantes                     |
-| PATCH, DELETE      | `/campaigns/:id/members/:userId`                    | Mudar papel e remover             |
-| GET, POST          | `/campaigns/:id/journals`                           | Páginas visíveis e criar          |
-| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`                   | Ler, editar, permissões e apagar  |
-| GET, POST          | `/campaigns/:id/characters`                         | Fichas visíveis e criar           |
-| GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`            | Ler, editar, permissões e apagar  |
-| GET, POST          | `/campaigns/:id/compendium`                         | Buscar e criar homebrew           |
-| GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`                | Ler, editar e apagar homebrew     |
-| GET, POST          | `/campaigns/:id/rolls`                              | Rolagens visíveis e rolar         |
-| GET, POST          | `/campaigns/:id/assets`                             | Galeria e envio de arquivo        |
-| DELETE             | `/campaigns/:id/assets/:assetId`                    | Apagar da galeria                 |
-| GET                | `/assets/:assetId`                                  | Baixar o arquivo                  |
-| GET, POST          | `/campaigns/:id/scenes`                             | Cenas e criar                     |
-| GET                | `/campaigns/:id/scenes/active`                      | Cena aberta para os jogadores     |
-| GET, PATCH, DELETE | `/campaigns/:id/scenes/:sceneId`                    | Ler, configurar e apagar          |
-| POST               | `/campaigns/:id/scenes/:sceneId/activate`           | Mostrar aos jogadores             |
-| POST               | `/campaigns/:id/scenes/:sceneId/duplicate`          | Duplicar                          |
-| POST               | `/campaigns/:id/scenes/:sceneId/items`              | Colocar item                      |
-| PATCH, DELETE      | `/campaigns/:id/scenes/:sceneId/items/:itemId`      | Mover, ajustar e apagar item      |
-| POST               | `/campaigns/:id/scenes/:sceneId/items/:itemId/door` | Abrir ou fechar porta             |
-| POST, DELETE       | `/campaigns/:id/scenes/:sceneId/explored`           | Somar áreas vistas e esquecer     |
-| POST               | `/campaigns/:id/scenes/:sceneId/items/:itemId/hp`   | Dano, cura e PV temporários       |
-| GET, POST, DELETE  | `/campaigns/:id/combat`                             | Combate atual, começar e encerrar |
-| POST               | `/campaigns/:id/combat/combatants`                  | Pôr tokens no combate             |
-| PATCH, DELETE      | `/campaigns/:id/combat/combatants/:combatantId`     | Iniciativa, nome e tirar          |
-| POST               | `/campaigns/:id/combat/initiative`                  | Rolar iniciativa                  |
-| POST               | `/campaigns/:id/combat/next`, `/previous`           | Passar e voltar a vez             |
-| POST               | `/campaigns/:id/combat/attack`                      | Ataque contra a CA do alvo        |
-| GET                | `/health`                                           | Saúde da API e do banco           |
+| Método             | Rota                                                | Descrição                            |
+| ------------------ | --------------------------------------------------- | ------------------------------------ |
+| POST               | `/auth/register`, `/auth/login`, `/auth/logout`     | Sessão                               |
+| GET, PATCH         | `/auth/me`                                          | Perfil                               |
+| GET, POST          | `/campaigns`                                        | Suas campanhas e criar               |
+| GET, PATCH, DELETE | `/campaigns/:id`                                    | Detalhes, editar e apagar            |
+| POST, DELETE       | `/campaigns/:id/invite`                             | Gerar ou desativar o link            |
+| GET                | `/invites/:code`                                    | Prévia do convite                    |
+| POST               | `/invites/:code/accept`                             | Entrar na campanha                   |
+| GET                | `/campaigns/:id/members`                            | Participantes                        |
+| PATCH, DELETE      | `/campaigns/:id/members/:userId`                    | Mudar papel e remover                |
+| GET, POST          | `/campaigns/:id/journals`                           | Páginas visíveis e criar             |
+| GET, PATCH, DELETE | `/campaigns/:id/journals/:pageId`                   | Ler, editar, permissões e apagar     |
+| GET, POST          | `/campaigns/:id/characters`                         | Fichas visíveis e criar              |
+| GET, PATCH, DELETE | `/campaigns/:id/characters/:characterId`            | Ler, editar, permissões e apagar     |
+| GET, POST          | `/campaigns/:id/compendium`                         | Buscar e criar homebrew              |
+| GET, PATCH, DELETE | `/campaigns/:id/compendium/:entryId`                | Ler, editar e apagar homebrew        |
+| GET, POST          | `/campaigns/:id/rolls`                              | Rolagens visíveis e rolar            |
+| GET, POST          | `/campaigns/:id/messages`                           | Mensagens visíveis e enviar          |
+| GET, POST          | `/campaigns/:id/handouts`                           | Revelações visíveis e criar          |
+| PATCH, DELETE      | `/campaigns/:id/handouts/:handoutId`                | Editar e apagar revelação            |
+| POST               | `/campaigns/:id/handouts/:handoutId/show`           | Mostrar a todos, a alguns ou ocultar |
+| GET, PUT           | `/campaigns/:id/jukebox`                            | Trilha atual e controlar             |
+| POST               | `/campaigns/:id/jukebox/sfx`                        | Tocar um efeito para a mesa          |
+| GET, POST          | `/campaigns/:id/assets`                             | Galeria e envio de arquivo           |
+| DELETE             | `/campaigns/:id/assets/:assetId`                    | Apagar da galeria                    |
+| GET                | `/assets/:assetId`                                  | Baixar o arquivo                     |
+| GET, POST          | `/campaigns/:id/scenes`                             | Cenas e criar                        |
+| GET                | `/campaigns/:id/scenes/active`                      | Cena aberta para os jogadores        |
+| GET, PATCH, DELETE | `/campaigns/:id/scenes/:sceneId`                    | Ler, configurar e apagar             |
+| POST               | `/campaigns/:id/scenes/:sceneId/activate`           | Mostrar aos jogadores                |
+| POST               | `/campaigns/:id/scenes/:sceneId/duplicate`          | Duplicar                             |
+| POST               | `/campaigns/:id/scenes/:sceneId/items`              | Colocar item                         |
+| PATCH, DELETE      | `/campaigns/:id/scenes/:sceneId/items/:itemId`      | Mover, ajustar e apagar item         |
+| POST               | `/campaigns/:id/scenes/:sceneId/items/:itemId/door` | Abrir ou fechar porta                |
+| POST, DELETE       | `/campaigns/:id/scenes/:sceneId/explored`           | Somar áreas vistas e esquecer        |
+| POST               | `/campaigns/:id/scenes/:sceneId/items/:itemId/hp`   | Dano, cura e PV temporários          |
+| GET, POST, DELETE  | `/campaigns/:id/combat`                             | Combate atual, começar e encerrar    |
+| POST               | `/campaigns/:id/combat/combatants`                  | Pôr tokens no combate                |
+| PATCH, DELETE      | `/campaigns/:id/combat/combatants/:combatantId`     | Iniciativa, nome e tirar             |
+| POST               | `/campaigns/:id/combat/initiative`                  | Rolar iniciativa                     |
+| POST               | `/campaigns/:id/combat/next`, `/previous`           | Passar e voltar a vez                |
+| POST               | `/campaigns/:id/combat/attack`                      | Ataque contra a CA do alvo           |
+| GET                | `/health`                                           | Saúde da API e do banco              |
 
 | Evento (Socket.IO)                 | Direção            | O que faz                                              |
 | ---------------------------------- | ------------------ | ------------------------------------------------------ |
@@ -245,6 +270,12 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | `scene:item`, `scene:item:removed` | servidor → cliente | Item colocado, mexido ou apagado                       |
 | `scene:explored`                   | servidor → cliente | O grupo viu uma parte nova da cena                     |
 | `combat:update`                    | servidor → cliente | Combate mudou, sem as criaturas ocultas para jogadores |
+| `message:new`                      | servidor → cliente | Mensagem nova, só para quem pode ler                   |
+| `handout:show`                     | servidor → cliente | O mestre mostrou uma revelação para você               |
+| `jukebox:update`, `jukebox:sfx`    | servidor → cliente | Trilha mudou ou efeito tocou                           |
+| `rtc:join`, `rtc:leave`            | cliente → servidor | Entrar e sair da conversa por voz                      |
+| `rtc:peers`                        | servidor → cliente | Quem está na conversa por voz                          |
+| `rtc:signal`                       | os dois sentidos   | Oferta, resposta e candidatos do WebRTC                |
 
 ## Deploy
 
@@ -254,4 +285,4 @@ Em produção a API também entrega o front, então é um serviço só, e as mig
 docker compose --profile app up --build
 ```
 
-Variáveis: `DATABASE_URL`, `JWT_SECRET`, `WEB_ORIGIN` e `PORT`.
+Variáveis: `DATABASE_URL`, `JWT_SECRET`, `WEB_ORIGIN` e `PORT`, e no build do front `VITE_STUN_URLS` para a voz.
