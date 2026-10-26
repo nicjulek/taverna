@@ -215,11 +215,34 @@ export type AssetMime = keyof typeof ASSET_TYPES
 
 export const ASSET_MAX_BYTES = 25 * 1024 * 1024
 
+export const ASSET_KINDS = ['map', 'token', 'image', 'audio'] as const
+export type AssetKind = (typeof ASSET_KINDS)[number]
+export const ASSET_KIND_LABELS: Record<AssetKind, { one: string; many: string }> = {
+  map: { one: 'Mapa', many: 'Mapas' },
+  token: { one: 'Token', many: 'Tokens' },
+  image: { one: 'Imagem', many: 'Imagens' },
+  audio: { one: 'Áudio', many: 'Áudios' }
+}
+
+export function defaultAssetKind(mime: string, wanted?: string | null): AssetKind {
+  if (isAudio(mime)) return 'audio'
+  if (wanted === 'token' || wanted === 'image' || wanted === 'map') return wanted
+  return 'map'
+}
+
+export const updateAssetSchema = z.object({
+  name: z.string().trim().min(1, 'Dê um nome').max(120).optional(),
+  kind: z.enum(ASSET_KINDS).optional()
+})
+export type UpdateAssetInput = z.infer<typeof updateAssetSchema>
+
 export interface AssetDto {
   id: string
   name: string
   mime: AssetMime
+  kind: AssetKind
   size: number
+  originalSize: number
   url: string
   uploaderId: string | null
   createdAt: string

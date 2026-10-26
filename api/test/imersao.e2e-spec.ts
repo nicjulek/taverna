@@ -182,8 +182,8 @@ describe('chat e imersão', () => {
       volume: 0.5,
       url: `/api/assets/${music.id}`
     })
-    const image = ((await gm.agent().get(`${base}/assets`).expect(200)).body as { id: string; mime: string }[]).find(
-      (a) => a.mime === 'image/png'
+    const image = ((await gm.agent().get(`${base}/assets`).expect(200)).body as { id: string; mime: string }[]).find((a) =>
+      a.mime.startsWith('image/')
     )!
     await gm.agent().put(`${base}/jukebox`).send({ assetId: image.id, playing: true, position: 0 }).expect(400)
     await gm.agent().post(`${base}/jukebox/sfx`).send({ assetId: music.id }).expect(204)

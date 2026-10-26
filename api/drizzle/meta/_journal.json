@@ -78,6 +78,13 @@
       "when": 1794918727366,
       "tag": "0010_chat_e_imersao",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794921052010,
+      "tag": "0011_galeria",
+      "breakpoints": true
     }
   ]
 }

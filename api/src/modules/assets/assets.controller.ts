@@ -1,9 +1,10 @@
-import { Controller, Delete, Get, HttpCode, Param, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { ASSET_MAX_BYTES, type AssetDto } from '@taverna/shared'
+import { ASSET_MAX_BYTES, type AssetDto, type UpdateAssetInput, updateAssetSchema } from '@taverna/shared'
 import type { Response } from 'express'
 import { type AuthUser, CurrentUser } from '../../common/auth'
 import { UuidPipe } from '../../common/uuid.pipe'
+import { ZodPipe } from '../../common/zod.pipe'
 import { AssetsService } from './assets.service'
 
 @Controller()
@@ -20,9 +21,20 @@ export class AssetsController {
   upload(
     @CurrentUser() user: AuthUser,
     @Param('campaignId', UuidPipe) campaignId: string,
-    @UploadedFile() file: Express.Multer.File | undefined
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body('kind') kind?: string
   ): Promise<AssetDto> {
-    return this.assets.upload(campaignId, user.id, file)
+    return this.assets.upload(campaignId, user.id, file, kind)
+  }
+
+  @Patch('campaigns/:campaignId/assets/:id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('campaignId', UuidPipe) campaignId: string,
+    @Param('id', UuidPipe) id: string,
+    @Body(new ZodPipe(updateAssetSchema)) body: UpdateAssetInput
+  ): Promise<AssetDto> {
+    return this.assets.update(campaignId, id, user.id, body)
   }
 
   @Delete('campaigns/:campaignId/assets/:id')

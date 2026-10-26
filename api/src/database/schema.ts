@@ -17,6 +17,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import type {
   AccessLevel,
+  AssetKind,
   AssetMime,
   CompendiumKind,
   HandoutKind,
@@ -151,7 +152,9 @@ export const assets = pgTable(
     uploaderId: uuid('uploader_id').references(() => users.id, { onDelete: 'set null' }),
     name: text('name').notNull(),
     mime: text('mime').$type<AssetMime>().notNull(),
+    kind: text('kind').$type<AssetKind>().notNull().default('map'),
     size: integer('size').notNull(),
+    originalSize: integer('original_size').notNull().default(0),
     createdAt: createdAt()
   },
   (table) => [index('assets_campaign_idx').on(table.campaignId)]
