@@ -17,6 +17,7 @@ import { CombatModule } from './modules/combat/combat.module'
 import { ChatModule } from './modules/chat/chat.module'
 import { HandoutsModule } from './modules/handouts/handouts.module'
 import { JukeboxModule } from './modules/jukebox/jukebox.module'
+import { PortabilityModule } from './modules/portability/portability.module'
 import { CompendiumModule } from './modules/compendium/compendium.module'
 import { CharactersModule } from './modules/characters/characters.module'
 import { RollsModule } from './modules/rolls/rolls.module'
@@ -58,7 +59,8 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist')
     CombatModule,
     ChatModule,
     HandoutsModule,
-    JukeboxModule
+    JukeboxModule,
+    PortabilityModule
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]

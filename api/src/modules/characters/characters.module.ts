@@ -6,6 +6,7 @@ import { ScenesModule } from '../scenes/scenes.module'
 @Module({
   imports: [ScenesModule],
   controllers: [CharactersController],
-  providers: [CharactersService]
+  providers: [CharactersService],
+  exports: [CharactersService]
 })
 export class CharactersModule {}
