@@ -1,7 +1,7 @@
 import { roll } from '@taverna/dice'
 import { newSheet, type Sheet5e } from '@taverna/rules-5e'
 import bcrypt from 'bcryptjs'
-import { type AssetMime, DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
+import { type AssetKind, type AssetMime, DEFAULT_SCENE_SETTINGS, type RollVisibility } from '@taverna/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
@@ -139,7 +139,14 @@ async function seed(): Promise<void> {
   const svg = Buffer.from(mineMapSvg())
   const [map] = await db
     .insert(schema.assets)
-    .values({ campaignId: campaign!.id, uploaderId: gm.id, name: 'Mina antiga.svg', mime: 'image/svg+xml', size: svg.length })
+    .values({
+      campaignId: campaign!.id,
+      uploaderId: gm.id,
+      name: 'Mina antiga.svg',
+      mime: 'image/svg+xml',
+      size: svg.length,
+      originalSize: svg.length
+    })
     .returning()
   await db.insert(schema.assetBlobs).values({ assetId: map!.id, data: svg })
   const [mine, village] = await db
@@ -473,17 +480,17 @@ async function seed(): Promise<void> {
     }
   ])
 
-  const addAsset = async (name: string, mime: AssetMime, data: Buffer) => {
+  const addAsset = async (name: string, mime: AssetMime, data: Buffer, kind: AssetKind) => {
     const [row] = await db
       .insert(schema.assets)
-      .values({ campaignId: campaign!.id, uploaderId: gm.id, name, mime, size: data.length })
+      .values({ campaignId: campaign!.id, uploaderId: gm.id, name, mime, kind, size: data.length, originalSize: data.length })
       .returning()
     await db.insert(schema.assetBlobs).values({ assetId: row!.id, data })
     return row!
   }
-  const portrait = await addAsset('Dama da Mina.svg', 'image/svg+xml', Buffer.from(portraitSvg()))
-  const drips = await addAsset('Gotejar na mina.wav', 'audio/wav', dripsWav())
-  await addAsset('Porta rangendo.wav', 'audio/wav', creakWav())
+  const portrait = await addAsset('Dama da Mina.svg', 'image/svg+xml', Buffer.from(portraitSvg()), 'image')
+  const drips = await addAsset('Gotejar na mina.wav', 'audio/wav', dripsWav(), 'audio')
+  await addAsset('Porta rangendo.wav', 'audio/wav', creakWav(), 'audio')
   await db.insert(schema.handouts).values([
     {
       campaignId: campaign!.id,
