@@ -173,7 +173,7 @@ function JukeboxPanel({
   onSfx: (assetId: string) => void
 }) {
   const assets = useAssets(campaignId)
-  const upload = useUploadFiles(campaignId)
+  const upload = useUploadFiles(campaignId, 'audio')
   const input = useRef<HTMLInputElement>(null)
   const tracks = (assets.data ?? []).filter((a) => isAudio(a.mime))
   return (

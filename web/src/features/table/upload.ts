@@ -1,4 +1,4 @@
-import { ASSET_MAX_BYTES, ASSET_TYPES, type AssetDto } from '@taverna/shared'
+import { ASSET_MAX_BYTES, ASSET_TYPES, type AssetDto, type AssetKind } from '@taverna/shared'
 import { toast } from 'sonner'
 import { useUploadAsset } from './hooks'
 
@@ -28,7 +28,7 @@ export function readNatural(asset: Pick<AssetDto, 'url' | 'mime'>): Promise<{ wi
   })
 }
 
-export function useUploadFiles(campaignId: string) {
+export function useUploadFiles(campaignId: string, kind?: AssetKind) {
   const upload = useUploadAsset(campaignId)
   const run = async (files: File[]): Promise<AssetDto[]> => {
     const done: AssetDto[] = []
@@ -38,7 +38,7 @@ export function useUploadFiles(campaignId: string) {
         continue
       }
       try {
-        done.push(await upload.mutateAsync(file))
+        done.push(await upload.mutateAsync({ file, kind }))
       } catch (error) {
         toast.error(error instanceof Error ? error.message : `Não deu para enviar ${file.name}.`)
       }

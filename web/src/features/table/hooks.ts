@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AssetDto,
+  AssetKind,
   CreateSceneInput,
   SceneDto,
   SceneItemDto,
   SceneItemInput,
   SceneWithItemsDto,
+  UpdateAssetInput,
   UpdateSceneInput,
   UpdateSceneItemInput
 } from '@taverna/shared'
@@ -39,13 +41,30 @@ export function useAssets(campaignId: string) {
 export function useUploadAsset(campaignId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: ({ file, kind }: { file: File; kind?: AssetKind }) => {
       const form = new FormData()
+      if (kind) form.append('kind', kind)
       form.append('file', file)
       return api.upload<AssetDto>(`/campaigns/${campaignId}/assets`, form)
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.assets(campaignId) })
   })
+}
+
+export function useAssetMutations(campaignId: string) {
+  const queryClient = useQueryClient()
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: queryKeys.assets(campaignId) })
+  return {
+    update: useMutation({
+      mutationFn: ({ id, ...body }: UpdateAssetInput & { id: string }) =>
+        api.patch<AssetDto>(`/campaigns/${campaignId}/assets/${id}`, body),
+      onSuccess: refresh
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api.delete(`/campaigns/${campaignId}/assets/${id}`),
+      onSuccess: refresh
+    })
+  }
 }
 
 type SceneCache = SceneWithItemsDto | null | undefined

@@ -182,7 +182,13 @@ export function TablePage() {
     const { kind, at } = placing
     setPlacing(null)
     if (kind === 'token') {
-      const base = tokenItem(at, grid, { name: values.text, color: values.color, span: values.span, characterId: values.characterId })
+      const base = tokenItem(at, grid, {
+        name: values.text,
+        color: values.color,
+        span: values.span,
+        characterId: values.characterId,
+        ...(values.assetId ? { assetId: values.assetId } : {})
+      })
       const ownerId = characters.data?.find((c) => c.id === values.characterId)?.ownerId ?? null
       if (values.compendiumId) {
         void queryClient

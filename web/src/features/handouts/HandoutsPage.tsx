@@ -37,7 +37,7 @@ const VISUAL_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/svg+xml'
 
 function ImagePicker({ campaignId, value, onChange }: { campaignId: string; value: string | null; onChange: (id: string | null) => void }) {
   const assets = useAssets(campaignId)
-  const upload = useUploadFiles(campaignId)
+  const upload = useUploadFiles(campaignId, 'image')
   const input = useRef<HTMLInputElement>(null)
   const images = (assets.data ?? []).filter((a) => isVisual(a.mime) && a.mime.startsWith('image/'))
   return (

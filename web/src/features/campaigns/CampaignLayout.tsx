@@ -1,5 +1,5 @@
 import { isGameMaster, ROLE_LABELS } from '@taverna/shared'
-import { BookMarked, BookOpen, Dices, Feather, Map as MapIcon, ScrollText, Settings, Users } from 'lucide-react'
+import { BookMarked, BookOpen, Dices, Feather, Images, Map as MapIcon, ScrollText, Settings, Users } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { CriticalFail } from '@/components/art/CriticalFail'
@@ -24,6 +24,7 @@ const TABS = [
   { to: 'fichas', label: 'Fichas', icon: ScrollText },
   { to: 'dados', label: 'Chat e dados', icon: Dices },
   { to: 'revelacoes', label: 'Revelações', icon: Feather },
+  { to: 'galeria', label: 'Galeria', icon: Images },
   { to: 'compendio', label: 'Compêndio', icon: BookMarked },
   { to: 'jogadores', label: 'Jogadores', icon: Users },
   { to: 'ajustes', label: 'Ajustes', icon: Settings }

@@ -1,4 +1,4 @@
-import { initials, plural, timeAgo } from './format'
+import { initials, plural, timeAgo, fileSize } from './format'
 
 describe('format', () => {
   it('pega as iniciais ignorando artigos', () => {
@@ -20,5 +20,13 @@ describe('format', () => {
   it('flexiona o plural', () => {
     expect(plural(1, 'jogador', 'jogadores')).toBe('1 jogador')
     expect(plural(3, 'jogador', 'jogadores')).toBe('3 jogadores')
+  })
+})
+
+describe('fileSize', () => {
+  it('escreve bytes, KB e MB em português', () => {
+    expect(fileSize(512)).toBe('512 B')
+    expect(fileSize(2048)).toBe('2 KB')
+    expect(fileSize(5 * 1024 * 1024 + 300_000)).toBe('5,3 MB')
   })
 })

@@ -17,7 +17,7 @@ export function Gallery({ campaignId, open, onOpenChange, onPick }: GalleryProps
   const assets = useAssets(campaignId)
   const upload = useUploadFiles(campaignId)
   const input = useRef<HTMLInputElement>(null)
-  const visual = (assets.data ?? []).filter((asset) => isVisual(asset.mime))
+  const visual = (assets.data ?? []).filter((asset) => isVisual(asset.mime) && asset.kind !== 'token')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
