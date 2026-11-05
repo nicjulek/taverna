@@ -1,0 +1,301 @@
+.print-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.print-bar {
+  margin: 0 auto 1.25rem;
+  display: flex;
+  max-width: 210mm;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sheet {
+  --ink: #241a12;
+  --paper: #f6efe0;
+  --rule: #cdb98f;
+  --accent: #7b2f24;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 13mm;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Alegreya, Georgia, serif;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.9);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.sheet h1,
+.sheet h2,
+.sheet h3 {
+  color: var(--ink);
+  font-family: Alegreya, Georgia, serif;
+}
+
+.sheet h1 {
+  font-size: 26pt;
+  line-height: 1.05;
+}
+
+.sheet h2 {
+  margin: 0.9em 0 0.35em;
+  border-bottom: 1.5px solid var(--accent);
+  padding-bottom: 0.15em;
+  font-size: 12.5pt;
+  color: var(--accent);
+}
+
+.sheet h3 {
+  font-size: 10.5pt;
+  font-weight: 700;
+}
+
+.sheet .muted {
+  color: #6b5a45;
+  font-weight: 400;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 3px double var(--rule);
+  padding-bottom: 0.6rem;
+}
+
+.sheet-head .campaign {
+  max-width: 45%;
+  text-align: right;
+  font-style: italic;
+}
+
+.vitals {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1.5px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.35rem 0.2rem;
+  text-align: center;
+}
+
+.box-value {
+  font-size: 14pt;
+  font-weight: 700;
+}
+
+.box-label {
+  font-size: 7.5pt;
+  line-height: 1.15;
+}
+
+.box-small {
+  font-size: 7.5pt;
+  color: var(--accent);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr 1.3fr;
+  gap: 0 1.1rem;
+}
+
+.abilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.abilities li {
+  display: grid;
+  justify-items: center;
+  border: 1.5px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.2rem;
+}
+
+.ability-name {
+  font-size: 7.5pt;
+}
+
+.ability-mod {
+  font-size: 15pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ability-score {
+  min-width: 2.2em;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  text-align: center;
+  font-size: 8.5pt;
+}
+
+.lines li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px dotted var(--rule);
+  padding: 0.08rem 0;
+}
+
+.grow {
+  flex: 1;
+}
+
+.mark {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  flex: none;
+  border: 1.3px solid var(--ink);
+  border-radius: 999px;
+}
+
+.mark-proficient {
+  background: var(--ink);
+}
+
+.mark-expertise {
+  border-radius: 1px;
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: rotate(45deg);
+}
+
+.legend {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 8pt;
+}
+
+.sheet table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet th {
+  text-align: left;
+  font-size: 8pt;
+  font-weight: 400;
+  color: #6b5a45;
+}
+
+.sheet td {
+  border-bottom: 1px dotted var(--rule);
+  padding: 0.12rem 0.2rem 0.12rem 0;
+  vertical-align: top;
+}
+
+.pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 9rem;
+}
+
+.pip {
+  width: 0.6em;
+  height: 0.6em;
+  border: 1.2px solid var(--ink);
+  border-radius: 2px;
+}
+
+.pip.on {
+  background: var(--ink);
+}
+
+.spell-grid {
+  columns: 3;
+  column-gap: 1.1rem;
+}
+
+.spell-grid > div {
+  break-inside: avoid;
+  margin-bottom: 0.5rem;
+}
+
+.spell-grid li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.notes p {
+  white-space: pre-wrap;
+}
+
+.sheet footer {
+  margin-top: 1.2rem;
+  text-align: right;
+  font-size: 7.5pt;
+}
+
+@media (max-width: 760px) {
+  .vitals {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .spell-grid {
+    columns: 1;
+  }
+
+  .sheet {
+    min-height: 0;
+    padding: 6mm;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #f6efe0 !important;
+  }
+
+  .print-page {
+    padding: 0;
+  }
+
+  .print-bar {
+    display: none;
+  }
+
+  .sheet {
+    box-shadow: none;
+    max-width: none;
+    width: 210mm;
+  }
+
+  .sheet h2,
+  .sheet section {
+    break-inside: avoid-page;
+  }
+}

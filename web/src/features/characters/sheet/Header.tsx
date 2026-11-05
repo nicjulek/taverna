@@ -1,6 +1,6 @@
 import type { RollMode } from '@taverna/rules-core'
 import { isGameMaster } from '@taverna/shared'
-import { Check, Cloud, LoaderCircle, MoreHorizontal, Star, TriangleAlert } from 'lucide-react'
+import { Check, Cloud, Download, FileJson, LoaderCircle, MoreHorizontal, Printer, Star, TriangleAlert } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
@@ -78,6 +78,30 @@ export function SheetHeader() {
               {Status.text}
             </span>
           )}
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Baixar a ficha">
+                <Download />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent>
+              <DropdownItem
+                onSelect={() => window.open(`/campanhas/${campaignId}/fichas/${character.id}/imprimir?imprimir`, '_blank', 'noopener')}
+              >
+                <Printer /> Ficha em PDF
+              </DropdownItem>
+              <DropdownItem
+                onSelect={() => {
+                  const link = document.createElement('a')
+                  link.href = `/api/campaigns/${campaignId}/characters/${character.id}/export`
+                  link.download = ''
+                  link.click()
+                }}
+              >
+                <FileJson /> Arquivo da ficha (JSON)
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
           {canManage && (
             <Dropdown>
               <DropdownTrigger asChild>

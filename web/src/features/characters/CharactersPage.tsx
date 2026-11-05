@@ -1,18 +1,33 @@
-import { Shield, UserPlus } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { FileUp, Shield, UserPlus } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import { BlankSheet } from '@/components/art/BlankSheet'
 import { Button, EmptyState, ErrorNote, Seal, Skeleton, Token } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useCampaignContext } from '../campaigns/context'
 import { CreateCharacterDialog } from './CreateCharacterDialog'
 import { classLine, hpTone } from './format'
-import { useCharacters } from './hooks'
+import { useCharacterMutations, useCharacters } from './hooks'
+import { readJsonFile } from '@/lib/readJson'
 
 export function CharactersPage() {
   const { campaign } = useCampaignContext()
   const { data, isPending, error } = useCharacters(campaign.id)
   const [creating, setCreating] = useState(false)
+  const { importSheet } = useCharacterMutations(campaign.id)
+  const navigate = useNavigate()
+  const input = useRef<HTMLInputElement>(null)
+  const importFile = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const created = await importSheet.mutateAsync(await readJsonFile(file))
+      toast(`${created.name} entrou na campanha.`)
+      void navigate(created.id)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não deu para importar a ficha.')
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -21,9 +36,27 @@ export function CharactersPage() {
           <h2 className="text-2xl">Fichas</h2>
           <p className="text-moss">Cada um cuida da sua. O mestre vê e edita todas.</p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <UserPlus /> Nova ficha
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => input.current?.click()} loading={importSheet.isPending}>
+            <FileUp /> Importar ficha
+          </Button>
+          <Button onClick={() => setCreating(true)}>
+            <UserPlus /> Nova ficha
+          </Button>
+          <input
+            ref={input}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              void importFile(file)
+            }}
+          />
+        </div>
       </div>
       {error && <ErrorNote>{error.message}</ErrorNote>}
       {isPending && <Skeleton className="h-40" />}

@@ -28,6 +28,10 @@ export function useCharacterMutations(campaignId: string) {
     mutationFn: (input: CreateCharacterInput) => api.post<CharacterDto>(`/campaigns/${campaignId}/characters`, input),
     onSuccess: store
   })
+  const importSheet = useMutation({
+    mutationFn: (file: unknown) => api.post<CharacterDto>(`/campaigns/${campaignId}/characters/import`, file),
+    onSuccess: store
+  })
   const update = useMutation({
     mutationFn: ({ id, ...input }: UpdateCharacterInput & { id: string }) =>
       api.patch<CharacterDto>(`/campaigns/${campaignId}/characters/${id}`, input),
@@ -40,5 +44,5 @@ export function useCharacterMutations(campaignId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.characters(campaignId), exact: true })
     }
   })
-  return { create, update, remove }
+  return { create, importSheet, update, remove }
 }
