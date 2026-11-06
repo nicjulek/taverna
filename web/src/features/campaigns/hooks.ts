@@ -22,6 +22,25 @@ export function useCreateCampaign() {
   })
 }
 
+export function useBringCampaign() {
+  const queryClient = useQueryClient()
+  const done = (campaign: CampaignDto) => {
+    queryClient.setQueryData(queryKeys.campaign(campaign.id), campaign)
+    void queryClient.invalidateQueries({ queryKey: queryKeys.campaigns, exact: true })
+  }
+  return {
+    importFile: useMutation({
+      mutationFn: (file: File) => {
+        const form = new FormData()
+        form.append('file', file)
+        return api.upload<CampaignDto>('/campaigns/import', form)
+      },
+      onSuccess: done
+    }),
+    demo: useMutation({ mutationFn: () => api.post<CampaignDto>('/campaigns/demo', {}), onSuccess: done })
+  }
+}
+
 export function useUpdateCampaign(id: string) {
   const queryClient = useQueryClient()
   return useMutation({

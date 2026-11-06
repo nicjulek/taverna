@@ -1,18 +1,43 @@
 import { ROLE_LABELS } from '@taverna/shared'
-import { Plus, Ticket } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { Compass, FileUp, MoreHorizontal, Plus, Ticket } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import { EmptyTable } from '@/components/art/EmptyTable'
-import { Badge, Button, EmptyState, ErrorNote, Seal, Skeleton } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+  EmptyState,
+  ErrorNote,
+  Seal,
+  Skeleton
+} from '@/components/ui'
 import { plural, timeAgo } from '@/lib/format'
 import { CreateCampaignDialog } from './CreateCampaignDialog'
-import { useCampaigns } from './hooks'
+import { useBringCampaign, useCampaigns } from './hooks'
 import { JoinDialog } from './JoinDialog'
 
 export function CampaignsPage() {
   const { data: campaigns, isPending, error } = useCampaigns()
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
+  const bring = useBringCampaign()
+  const navigate = useNavigate()
+  const input = useRef<HTMLInputElement>(null)
+  const open = (campaign: { id: string; name: string }, message: string) => {
+    toast(message)
+    void navigate(`/campanhas/${campaign.id}`)
+  }
+  const openDemo = () =>
+    bring.demo.mutate(undefined, {
+      onSuccess: (campaign) => open(campaign, 'A campanha de demonstração é sua. Você é quem mestra.'),
+      onError: (error) => toast.error(error.message)
+    })
+  const importing = bring.importFile.isPending || bring.demo.isPending
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
@@ -28,6 +53,38 @@ export function CampaignsPage() {
           <Button onClick={() => setCreating(true)}>
             <Plus /> Nova campanha
           </Button>
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Trazer uma campanha" loading={importing}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent align="end">
+              <DropdownItem onSelect={() => input.current?.click()}>
+                <FileUp /> Importar campanha
+              </DropdownItem>
+              <DropdownItem onSelect={openDemo}>
+                <Compass /> Abrir a demonstração
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+          <input
+            ref={input}
+            type="file"
+            accept="application/json,.json,application/gzip,.gz"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file)
+                bring.importFile.mutate(file, {
+                  onSuccess: (campaign) => open(campaign, `${campaign.name} foi importada. Você é quem mestra.`),
+                  onError: (error) => toast.error(error.message)
+                })
+            }}
+          />
         </div>
       </div>
 
@@ -53,10 +110,13 @@ export function CampaignsPage() {
               <Button variant="secondary" onClick={() => setJoining(true)}>
                 Entrar com convite
               </Button>
+              <Button variant="ghost" onClick={openDemo} loading={bring.demo.isPending}>
+                <Compass /> Experimentar a demonstração
+              </Button>
             </div>
           }
         >
-          Crie uma campanha para mestrar ou cole o convite que seu mestre mandou.
+          Crie uma campanha para mestrar, cole o convite que seu mestre mandou ou abra a demonstração pronta para ver tudo funcionando.
         </EmptyState>
       )}
 

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { isGameMaster, updateCampaignSchema, type UpdateCampaignInput } from '@taverna/shared'
+import { Download } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
@@ -19,8 +20,27 @@ export function SettingsPage() {
   return (
     <div className="flex max-w-2xl flex-col gap-10">
       {canEdit ? <DetailsForm /> : <ReadOnlyDetails />}
+      {canEdit && <ExportSection />}
       {campaign.role === 'gm' ? <DeleteSection /> : <LeaveSection />}
     </div>
+  )
+}
+
+function ExportSection() {
+  const { campaign } = useCampaignContext()
+  return (
+    <section className="rounded-panel border border-line p-5">
+      <h2 className="text-2xl">Levar a campanha</h2>
+      <p className="mt-1 mb-4 text-moss">
+        Um arquivo só com cenas, mapas, tokens, fichas, diário, homebrew, revelações e trilha. Serve de cópia de segurança e para abrir a
+        campanha em outra Taverna. Jogadores, conversas e rolagens ficam de fora.
+      </p>
+      <Button asChild variant="secondary">
+        <a href={`/api/campaigns/${campaign.id}/export`} download>
+          <Download /> Exportar campanha
+        </a>
+      </Button>
+    </section>
   )
 }
 

@@ -11,6 +11,8 @@ import { CharactersPage } from '@/features/characters/CharactersPage'
 import { CharacterPage } from '@/features/characters/sheet/CharacterPage'
 import { CompendiumPage } from '@/features/compendium/CompendiumPage'
 import { TablePage } from '@/features/table/TablePage'
+import { PrintSheetPage } from '@/features/characters/print/PrintSheetPage'
+import { GalleryPage } from '@/features/gallery/GalleryPage'
 import { HandoutsPage } from '@/features/handouts/HandoutsPage'
 import { DicePage } from '@/features/dice/DicePage'
 import { MembersPage } from '@/features/members/MembersPage'
@@ -33,6 +35,7 @@ export const router = createBrowserRouter([
       {
         element: <RequireAuth />,
         children: [
+          { path: '/campanhas/:campaignId/fichas/:characterId/imprimir', element: <PrintSheetPage /> },
           {
             element: <AppLayout />,
             children: [
@@ -69,6 +72,7 @@ export const router = createBrowserRouter([
                   { path: 'mesa', element: <TablePage /> },
                   { path: 'dados', element: <DicePage /> },
                   { path: 'revelacoes', element: <HandoutsPage /> },
+                  { path: 'galeria', element: <GalleryPage /> },
                   { path: 'jogadores', element: <MembersPage /> },
                   { path: 'ajustes', element: <SettingsPage /> }
                 ]
