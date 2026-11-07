@@ -132,7 +132,7 @@ function simulate(shapes: DieShape[], bounds: { w: number; h: number }) {
       linearDamping: 0.05
     })
     const side = Math.random() < 0.5 ? -1 : 1
-    body.position.set(side * bounds.w * 0.85, 3 + i * 1.6, (Math.random() - 0.5) * bounds.h)
+    body.position.set(side * bounds.w * 0.85, 4 + i * 2.2, (Math.random() - 0.5) * bounds.h)
     body.velocity.set(-side * (14 + Math.random() * 8), 2, (Math.random() - 0.5) * 10)
     body.angularVelocity.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30)
     body.quaternion.setFromEuler(Math.random() * 6, Math.random() * 6, Math.random() * 6)
@@ -195,7 +195,7 @@ export async function play(canvas: HTMLCanvasElement, requests: DieRequest[], op
   floor.receiveShadow = true
   scene.add(floor)
 
-  const shapes = requests.map((r) => dieShape(r.sides === 100 ? 10 : r.sides, 1))
+  const shapes = requests.map((r) => dieShape(r.sides === 100 ? 10 : r.sides, 1.5))
   const frames = simulate(shapes, bounds)
   const built = shapes.map((shape, i) => {
     const request = requests[i]!
