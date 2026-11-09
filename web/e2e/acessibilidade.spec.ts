@@ -1,14 +1,5 @@
-import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
-import { signUp } from './helpers'
-
-async function audit(page: Page, name: string) {
-  const results = await new AxeBuilder({ page: page as unknown as ConstructorParameters<typeof AxeBuilder>[0]['page'] })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze()
-  const problems = results.violations.map((violation) => `${name}: ${violation.id} (${violation.nodes.length}) ${violation.help}`)
-  expect(problems).toEqual([])
-}
+import { expect, test } from '@playwright/test'
+import { audit, signUp } from './helpers'
 
 test('as telas principais passam no axe (WCAG 2.1 AA)', async ({ page }) => {
   await page.goto('/entrar')
