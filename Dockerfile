@@ -34,6 +34,7 @@ COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/api/dist api/dist
 COPY --from=build /app/api/drizzle api/drizzle
 COPY --from=build /app/api/srd api/srd
+COPY --from=build /app/api/demo api/demo
 COPY --from=build /app/web/dist web/dist
 USER node
 EXPOSE 3000
