@@ -23,6 +23,9 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Revelações**: cartas, enigmas, retratos de NPC e itens que o mestre prepara e mostra na hora certa, para todos ou para um jogador só. Aparecem na tela de quem recebe e ficam guardados na aba Revelações.
 - **Trilha sonora**: o mestre envia músicas e efeitos (MP3, OGG, WAV, FLAC e M4A), toca, pausa, repete e muda o volume da mesa, e todo mundo ouve no mesmo ponto da faixa. Efeitos tocam uma vez por cima da música. Cada jogador tem o próprio volume.
 - **Voz e vídeo** pelo navegador, sem instalar nada: cada um entra com microfone ou câmera quando quiser e pode desligar a qualquer momento.
+- **Galeria** de mapas, tokens, imagens e áudios, com envio por arraste. Mapas, tokens e retratos são comprimidos sozinhos em WebP no tamanho certo para cada uso, e a galeria mostra quanto espaço foi economizado. Tokens podem usar uma imagem da galeria no lugar das iniciais.
+- **Levar e trazer**: fichas e campanhas inteiras exportadas em JSON, com mapas, tokens, áudios, cenas, diário, homebrew, revelações e trilha. O arquivo serve de cópia de segurança e abre em outra Taverna, onde quem importa vira mestre. A ficha também sai em PDF, pronta para imprimir em A4.
+- **Campanha de demonstração** pronta em um clique, para conhecer tudo sem montar nada.
 - **Tempo real**: quem está na mesa agora, páginas que aparecem para os outros assim que são salvas, e o jogador removido sai da tela na hora.
 
 | Entrar                      | Primeiros passos do mestre          |
@@ -45,9 +48,15 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 
 ![Compêndio](docs/compendio.webp)
 
+![Dados 3D rolando no chat](docs/dados-3d.gif)
+
 ![Chat e dados](docs/dados.webp)
 
-![Revelação na tela do jogador](docs/revelacao.webp)
+![O mestre mostra uma carta e ela aparece na tela do jogador](docs/revelacao.gif)
+
+![Galeria](docs/galeria.webp)
+
+![Ficha pronta para imprimir](docs/ficha-pdf.webp)
 
 <p align="center">
   <img src="docs/celular-entrar.webp" alt="Entrar pelo celular" width="240" />
@@ -63,7 +72,7 @@ Mesa virtual para jogar RPG de mesa online com os amigos. O mestre cria a campan
 - **Ilustrações próprias em SVG**, feitas para o projeto: a mesa da taverna no login, a mesa vazia, o livro do diário, a carta com lacre do convite (e o lacre partido quando o convite não vale mais) e o d20 tirando 1 nas telas de erro.
 - **Pensado para quem chega pelo celular:** o convite abre direto no telefone, cria a conta e volta sozinho para a campanha.
 - **Primeiros passos do mestre:** depois de criar a campanha, um painel guia os três passos até a primeira sessão e marca cada um quando é feito.
-- **WCAG 2.1 AA:** contraste conferido em todos os tokens, link para pular o cabeçalho, foco que volta para quem abriu cada diálogo, alvos de 44 px em telas de toque e nomes acessíveis nos avatares e ícones. O teste `acessibilidade.spec.ts` roda o **axe** em 14 telas e falha se aparecer qualquer violação.
+- **WCAG 2.1 AA:** contraste conferido em todos os tokens, link para pular o cabeçalho, foco que volta para quem abriu cada diálogo, alvos de 44 px em telas de toque e nomes acessíveis nos avatares e ícones. O teste `acessibilidade.spec.ts` roda o **axe** em 14 telas, e os testes da galeria e da ficha impressa somam mais 2, e falha se aparecer qualquer violação.
 
 ## Stack
 
@@ -165,6 +174,14 @@ A trilha sonora guarda a faixa, se está tocando, o ponto em que começou e a ho
 
 A conversa usa WebRTC direto entre os navegadores, em malha: cada pessoa se conecta com cada outra, e a API só repassa os sinais de conexão pelo Socket.IO. Funciona bem até umas seis pessoas. O endereço público de cada um é descoberto por STUN (`VITE_STUN_URLS`, separado por vírgula; o padrão é o servidor público do Google). Não há servidor TURN, então redes muito fechadas, como algumas corporativas ou de celular, podem não conectar; para isso, ponha um TURN na mesma variável.
 
+## Galeria, exportação e PDF
+
+Cada arquivo da galeria tem um tipo: mapa, token, imagem ou áudio. Ao enviar, a API confere o formato pelos primeiros bytes e, se for JPG, PNG ou WebP, redimensiona com [sharp](https://sharp.pixelplumbing.com) para até 4096 px nos mapas, 512 px nos tokens e 2048 px nas imagens, gravando em WebP quando fica menor ou quando a imagem passa do limite. SVG, GIF, vídeo e áudio ficam como vieram. O tamanho original fica guardado para a galeria mostrar a economia.
+
+A exportação da campanha (`taverna.campanha`, versão 1) é um JSON com os arquivos em base64. Os ids viram referências: na importação, mapas, fichas e homebrew ganham ids novos e as cenas, tokens, revelações e trilha são religadas a eles. Monstros do SRD vão pelo slug, então continuam ligados mesmo em outra instalação. Ficam de fora jogadores, permissões por pessoa, conversas, rolagens e combate em andamento. A importação aceita o JSON puro ou compactado em gzip, até 150 MB, e confere de novo o tipo de cada arquivo.
+
+A ficha em PDF é uma página própria, com estilo de impressão em A4, que o navegador transforma em PDF pelo diálogo de impressão. Assim não há gerador de PDF no servidor, e o texto continua selecionável.
+
 ## Compêndio e SRD 5.1
 
 O SRD vem do projeto aberto [5e-database](https://github.com/5e-bits/5e-database). O script `api/scripts/build-srd.mjs` converte os arquivos dele para o formato da Taverna e gera `api/srd/srd-5.1.json.gz`, que a migração importa sozinha (`npm run db:migrate`). Rodar de novo atualiza as entradas sem duplicar.
@@ -196,7 +213,7 @@ Abra http://localhost:5173. O seed cria a campanha **As Minas de Pedraluz** com 
 | ana@taverna.dev    | Co-mestre |
 | bruno@taverna.dev  | Jogador   |
 
-Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas anônima).
+Para ver o tempo real, entre com duas contas em janelas diferentes (uma delas anônima). Quem cria uma conta nova também pode abrir a mesma campanha pelo botão **Experimentar a demonstração**, que vem de `api/demo/pedraluz.campanha.json.gz`.
 
 ## Testes
 
@@ -238,6 +255,10 @@ Todas as rotas ficam em `/api` e, menos cadastro, login e saúde, exigem a sess�
 | POST               | `/campaigns/:id/handouts/:handoutId/show`           | Mostrar a todos, a alguns ou ocultar |
 | GET, PUT           | `/campaigns/:id/jukebox`                            | Trilha atual e controlar             |
 | POST               | `/campaigns/:id/jukebox/sfx`                        | Tocar um efeito para a mesa          |
+| GET                | `/campaigns/:id/export`                             | Exportar a campanha                  |
+| POST               | `/campaigns/import`, `/campaigns/demo`              | Importar campanha e demonstração     |
+| GET                | `/campaigns/:id/characters/:characterId/export`     | Exportar ficha                       |
+| POST               | `/campaigns/:id/characters/import`                  | Importar ficha                       |
 | GET, POST          | `/campaigns/:id/assets`                             | Galeria e envio de arquivo           |
 | DELETE             | `/campaigns/:id/assets/:assetId`                    | Apagar da galeria                    |
 | GET                | `/assets/:assetId`                                  | Baixar o arquivo                     |
@@ -286,3 +307,20 @@ docker compose --profile app up --build
 ```
 
 Variáveis: `DATABASE_URL`, `JWT_SECRET`, `WEB_ORIGIN` e `PORT`, e no build do front `VITE_STUN_URLS` para a voz.
+
+### Render
+
+O `render.yaml` cria o serviço Docker e um PostgreSQL. No painel do Render, escolha **New > Blueprint**, aponte para o repositório e preencha `WEB_ORIGIN` com o endereço que o Render der ao serviço (por exemplo `https://taverna.onrender.com`). O `JWT_SECRET` é gerado sozinho. No plano gratuito o serviço dorme sem uso e leva uns segundos para acordar.
+
+### Imagem pronta
+
+Cada tag `v*` publica a imagem no GitHub Container Registry pelo workflow `imagem.yml`:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+docker run -p 3000:3000 -e DATABASE_URL=... -e JWT_SECRET=... -e WEB_ORIGIN=http://localhost:3000 ghcr.io/<usuario>/taverna:latest
+```
+
+### Integração contínua
+
+O workflow `ci.yml` roda em cada push e pull request: lint, Prettier, tipos e testes unitários; os testes de integração da API com PostgreSQL; o Playwright com mestre e jogadores ao mesmo tempo, voz entre dois navegadores e o axe; e o build da imagem Docker.
